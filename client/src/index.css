@@ -1,0 +1,140 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cream-50: #fdfbf7;
+  --color-cream-100: #faf6ee;
+  --color-cream-200: #f5ede0;
+  --color-cream-300: #ecdfc8;
+  --color-cream-400: #dec9a6;
+  --color-cream-500: #cbb07e;
+  --color-cream-600: #b89863;
+  --color-cream-700: #9a7c51;
+  --color-cream-800: #7e6544;
+  --color-cream-900: #664f38;
+
+  --color-ink-50: #f6f6f5;
+  --color-ink-100: #e7e7e5;
+  --color-ink-200: #d0d0cd;
+  --color-ink-300: #a9a9a4;
+  --color-ink-400: #7a7a73;
+  --color-ink-500: #5a5a52;
+  --color-ink-600: #44443d;
+  --color-ink-700: #33332e;
+  --color-ink-800: #22221f;
+  --color-ink-900: #151513;
+
+  --color-accent-50: #fef5ee;
+  --color-accent-100: #fde6d3;
+  --color-accent-200: #fac9a6;
+  --color-accent-300: #f6a269;
+  --color-accent-400: #f17a35;
+  --color-accent-500: #e85d1b;
+  --color-accent-600: #c94913;
+  --color-accent-700: #a33913;
+  --color-accent-800: #822f16;
+  --color-accent-900: #6a2916;
+
+  --font-sans: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
+  --font-display: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-cream-50);
+    color: var(--color-ink-800);
+    font-family: 'Be Vietnam Pro', var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background-color: var(--color-ink-800);
+  color: var(--color-cream-50);
+  font-weight: 500;
+  border-radius: 0.75rem;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+.btn-primary:hover {
+  background-color: var(--color-ink-900);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background-color: #ffffff;
+  color: var(--color-ink-800);
+  font-weight: 500;
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-ink-200);
+  transition: all 0.2s;
+  cursor: pointer;
+}
+.btn-secondary:hover {
+  border-color: var(--color-ink-300);
+  background-color: var(--color-cream-100);
+}
+
+.btn-accent {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background-color: var(--color-accent-500);
+  color: #ffffff;
+  font-weight: 500;
+  border-radius: 0.75rem;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+.btn-accent:hover {
+  background-color: var(--color-accent-600);
+}
+
+.card {
+  background-color: #ffffff;
+  border-radius: 1rem;
+  border: 1px solid var(--color-ink-100);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.input-field {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background-color: #ffffff;
+  border: 1px solid var(--color-ink-200);
+  border-radius: 0.75rem;
+  color: var(--color-ink-800);
+  transition: all 0.2s;
+}
+.input-field:focus {
+  outline: none;
+  border-color: var(--color-ink-400);
+  box-shadow: 0 0 0 2px var(--color-ink-200);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #faf6ee;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbb07e;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #b89863;
+}

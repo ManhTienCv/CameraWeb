@@ -1,0 +1,195 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  fullName     String    @map("full_name")
+  phone        String?
+  avatarUrl    String?   @map("avatar_url")
+  role         String    @default("customer")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  addresses    Address[]
+  orders       Order[]
+
+  @@map("users")
+}
+
+model Address {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  label         String   @default("Nhà riêng")
+  recipientName String   @map("recipient_name")
+  phone         String
+  address       String
+  city          String   @default("Hà Nội")
+  isDefault     Boolean  @default(false) @map("is_default")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("addresses")
+}
+
+model Category {
+  id           String    @id @default(uuid())
+  name         String
+  slug         String    @unique
+  description  String?
+  icon         String?   @default("Camera")
+  displayOrder Int       @default(0) @map("display_order")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  products     Product[]
+
+  @@map("categories")
+}
+
+model Brand {
+  id          String    @id @default(uuid())
+  name        String
+  slug        String    @unique
+  description String?
+  logoUrl     String?   @map("logo_url")
+  products    Product[]
+
+  @@map("brands")
+}
+
+model Product {
+  id            String                 @id @default(uuid())
+  name          String
+  slug          String                 @unique
+  brand         String                 @default("Khác")
+  brandId       String?                @map("brand_id")
+  categoryId    String                 @map("category_id")
+  sku           String                 @unique
+  description   String?
+  price         Float
+  originalPrice Float?                 @map("original_price")
+  imageUrl      String?                @map("image_url")
+  stock         Int                    @default(0)
+  rating        Float                  @default(5.0)
+  reviewCount   Int                    @default(0) @map("review_count")
+  isFeatured    Boolean                @default(false) @map("is_featured")
+  isNew         Boolean                @default(true) @map("is_new")
+  status        String                 @default("active")
+  createdAt     DateTime               @default(now()) @map("created_at")
+  updatedAt     DateTime               @updatedAt @map("updated_at")
+
+  category      Category               @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  brandModel    Brand?                 @relation(fields: [brandId], references: [id])
+  images        ProductImage[]
+  specs         ProductSpecification[]
+  features      ProductFeature[]
+  cartItems     CartItem[]
+  orderItems    OrderItem[]
+
+  @@map("products")
+}
+
+model ProductImage {
+  id           String   @id @default(uuid())
+  productId    String   @map("product_id")
+  imageUrl     String   @map("image_url")
+  isPrimary    Boolean  @default(false) @map("is_primary")
+  displayOrder Int      @default(0) @map("display_order")
+  product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_images")
+}
+
+model ProductSpecification {
+  id         String  @id @default(uuid())
+  productId  String  @map("product_id")
+  specKey    String  @map("spec_key")
+  specValue  String  @map("spec_value")
+  product    Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_specifications")
+}
+
+model ProductFeature {
+  id           String  @id @default(uuid())
+  productId    String  @map("product_id")
+  featureText  String  @map("feature_text")
+  displayOrder Int     @default(0) @map("display_order")
+  product      Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_features")
+}
+
+model Cart {
+  id        String     @id @default(uuid())
+  sessionId String     @unique @map("session_id")
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+  items     CartItem[]
+
+  @@map("carts")
+}
+
+model CartItem {
+  id        String   @id @default(uuid())
+  cartId    String   @map("cart_id")
+  productId String   @map("product_id")
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("cart_items")
+}
+
+model Order {
+  id              String      @id @default(uuid())
+  orderCode       String      @unique @map("order_code")
+  userId          String?     @map("user_id")
+  sessionId       String?     @map("session_id")
+  customerName    String      @map("customer_name")
+  customerEmail   String      @map("customer_email")
+  customerPhone   String      @map("customer_phone")
+  shippingAddress String      @map("shipping_address")
+  city            String
+  paymentMethod   String      @default("cod") @map("payment_method")
+  paymentStatus   String      @default("pending") @map("payment_status")
+  totalAmount     Float       @map("total_amount")
+  shippingFee     Float       @default(0) @map("shipping_fee")
+  discountAmount  Float       @default(0) @map("discount_amount")
+  orderStatus     String      @default("pending") @map("order_status")
+  notes           String?
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  user            User?       @relation(fields: [userId], references: [id])
+  items           OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String   @id @default(uuid())
+  orderId   String   @map("order_id")
+  productId String   @map("product_id")
+  name      String
+  price     Float
+  quantity  Int
+  imageUrl  String?  @map("image_url")
+
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id])
+
+  @@map("order_items")
+}

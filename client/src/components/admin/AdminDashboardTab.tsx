@@ -40,16 +40,22 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({
   const activeProducts = products.filter((p) => p.status === 'active' && p.stock > 0);
   const lowStockProducts = products.filter((p) => p.stock <= 5);
 
-  // Revenue chart mock data by weekday
-  const weeklyData = [
-    { day: 'T2', value: 42, revenue: '42.0M' },
-    { day: 'T3', value: 68, revenue: '68.5M' },
-    { day: 'T4', value: 54, revenue: '54.2M' },
-    { day: 'T5', value: 89, revenue: '89.0M' },
-    { day: 'T6', value: 76, revenue: '76.4M' },
-    { day: 'T7', value: 95, revenue: '95.8M', highlight: true },
-    { day: 'CN', value: 63, revenue: '63.1M' },
+  // Revenue chart data by weekday - automatically highlights the peak revenue day
+  const rawWeeklyData = [
+    { day: 'T2', value: 42, revenue: '42.0M', amount: 42.0 },
+    { day: 'T3', value: 68, revenue: '68.5M', amount: 68.5 },
+    { day: 'T4', value: 54, revenue: '54.2M', amount: 54.2 },
+    { day: 'T5', value: 89, revenue: '89.0M', amount: 89.0 },
+    { day: 'T6', value: 76, revenue: '76.4M', amount: 76.4 },
+    { day: 'T7', value: 95, revenue: '95.8M', amount: 95.8 },
+    { day: 'CN', value: 63, revenue: '63.1M', amount: 63.1 },
   ];
+
+  const maxRevenueAmount = Math.max(...rawWeeklyData.map((d) => d.amount));
+  const weeklyData = rawWeeklyData.map((d) => ({
+    ...d,
+    highlight: d.amount === maxRevenueAmount,
+  }));
 
   // Brand sales breakdown
   const brandShares = [

@@ -170,8 +170,14 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({
           {/* Bar Chart Visual */}
           <div className="h-48 flex items-end justify-between gap-3 pt-6 px-2 border-b border-cream-100">
             {weeklyData.map((d, i) => (
-              <div key={i} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
-                <span className="text-[11px] font-bold text-ink-700 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap bg-ink-900 text-cream-50 px-1.5 py-0.5 rounded-md text-xs shadow-xs">
+              <div key={i} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group cursor-pointer">
+                <span
+                  className={`text-[11px] font-bold whitespace-nowrap px-1.5 py-0.5 rounded-md transition-all ${
+                    d.highlight
+                      ? 'bg-accent-50 text-accent-700 border border-accent-200 shadow-2xs font-bold'
+                      : 'text-ink-500 group-hover:text-accent-600 group-hover:bg-accent-50/60'
+                  }`}
+                >
                   {d.revenue}
                 </span>
                 <div
@@ -182,7 +188,7 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({
                       : 'bg-cream-200 group-hover:bg-accent-200'
                   }`}
                 />
-                <span className="text-xs font-bold text-ink-500 group-hover:text-ink-900 transition-colors">
+                <span className={`text-xs font-bold transition-colors ${d.highlight ? 'text-accent-700' : 'text-ink-500 group-hover:text-ink-900'}`}>
                   {d.day}
                 </span>
               </div>

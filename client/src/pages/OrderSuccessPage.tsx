@@ -14,6 +14,8 @@ import {
   Clock,
   Send,
   Loader2,
+  Flame,
+  AlertTriangle,
 } from 'lucide-react';
 import type { Page, Order } from '../types';
 import { api } from '../lib/api';
@@ -25,12 +27,40 @@ interface Props {
   onNavigate: (page: Page) => void;
 }
 
+const CHECKOUT_DURATION_SECONDS = 15 * 60;
+
 export function OrderSuccessPage({ orderId, onNavigate }: Props) {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [confirmingPayment, setConfirmingPayment] = useState(false);
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
+
+  // 15-minute Session Countdown Timer (Synced with Checkout Session)
+  const [timeLeft, setTimeLeft] = useState<number>(CHECKOUT_DURATION_SECONDS);
+  const [isExpired, setIsExpired] = useState<boolean>(false);
+
+  useEffect(() => {
+    const storedDeadline = sessionStorage.getItem('camerahub_checkout_deadline');
+    let targetDeadline = storedDeadline ? parseInt(storedDeadline, 10) : 0;
+
+    if (!targetDeadline || targetDeadline <= Date.now()) {
+      targetDeadline = Date.now() + CHECKOUT_DURATION_SECONDS * 1000;
+      sessionStorage.setItem('camerahub_checkout_deadline', String(targetDeadline));
+    }
+
+    const updateTimer = () => {
+      const remaining = Math.max(0, Math.floor((targetDeadline - Date.now()) / 1000));
+      setTimeLeft(remaining);
+      if (remaining <= 0) {
+        setIsExpired(true);
+      }
+    };
+
+    updateTimer();
+    const timer = setInterval(updateTimer, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -84,6 +114,10 @@ export function OrderSuccessPage({ orderId, onNavigate }: Props) {
       </div>
     );
   }
+
+  const minutes = Math.floor(timeLeft / 60);
+  const seconds = timeLeft % 60;
+  const formattedTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
   const isVietQR = order?.payment_method === 'vietqr' || order?.payment_method === 'bank_transfer';
   const qrUrl = order
@@ -157,6 +191,59 @@ export function OrderSuccessPage({ orderId, onNavigate }: Props) {
               </span>
             )}
           </div>
+
+          {/* 15-Minute Countdown "Thời Gian Giữ Hàng" Banner */}
+          {!paymentConfirmed && (
+            <div
+              className={`p-4 rounded-2xl border transition-all flex flex-wrap items-center justify-between gap-3 ${
+                isExpired
+                  ? 'bg-rose-50 border-rose-200 text-rose-900'
+                  : timeLeft < 180
+                  ? 'bg-rose-50/70 border-rose-200 text-rose-900 animate-pulse'
+                  : 'bg-amber-50/80 border-amber-200/90 text-amber-900'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <div
+                  className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                    isExpired ? 'bg-rose-100 text-rose-600' : 'bg-amber-100 text-amber-600'
+                  }`}
+                >
+                  {isExpired ? (
+                    <AlertTriangle size={18} />
+                  ) : (
+                    <Flame size={18} className="animate-pulse" />
+                  )}
+                </div>
+                <div>
+                  <div className="text-[11px] font-bold uppercase tracking-wider">
+                    {isExpired ? 'Đã hết thời gian giữ hàng' : 'Thời gian giữ hàng thanh toán'}
+                  </div>
+                  <p className="text-xs text-ink-600 mt-0.5">
+                    {isExpired
+                      ? 'Đơn hàng trực tuyến đã quá thời gian 15 phút. Vui lòng quay lại giỏ hàng.'
+                      : 'Đơn hàng được bảo lưu trong 15 phút. Vui lòng quét mã QR trước khi hết giờ.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {!isExpired ? (
+                  <div className="flex items-center gap-1.5 font-display font-bold text-base text-accent-600 bg-white px-3.5 py-1.5 rounded-xl border border-amber-200 shadow-2xs">
+                    <Clock size={15} className="text-accent-500" />
+                    <span>{formattedTime}</span>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => onNavigate({ name: 'cart' })}
+                    className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+                  >
+                    Quay lại Giỏ hàng
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
             {/* Left: Dynamic QR Code */}

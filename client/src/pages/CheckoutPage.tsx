@@ -54,21 +54,26 @@ export function CheckoutPage({ onNavigate }: Props) {
   const [isExpired, setIsExpired] = useState<boolean>(false);
 
   useEffect(() => {
-    // Reset timer when component mounts
-    setTimeLeft(CHECKOUT_DURATION_SECONDS);
-    setIsExpired(false);
+    // Check if an active deadline exists in sessionStorage
+    const storedDeadline = sessionStorage.getItem('camerahub_checkout_deadline');
+    let targetDeadline = storedDeadline ? parseInt(storedDeadline, 10) : 0;
 
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          setIsExpired(true);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+    // If no deadline or expired, initialize a fresh 15-minute deadline
+    if (!targetDeadline || targetDeadline <= Date.now()) {
+      targetDeadline = Date.now() + CHECKOUT_DURATION_SECONDS * 1000;
+      sessionStorage.setItem('camerahub_checkout_deadline', String(targetDeadline));
+    }
 
+    const updateTimer = () => {
+      const remaining = Math.max(0, Math.floor((targetDeadline - Date.now()) / 1000));
+      setTimeLeft(remaining);
+      if (remaining <= 0) {
+        setIsExpired(true);
+      }
+    };
+
+    updateTimer();
+    const timer = setInterval(updateTimer, 1000);
     return () => clearInterval(timer);
   }, []);
 
@@ -557,77 +562,6 @@ export function CheckoutPage({ onNavigate }: Props) {
                         <p className="text-xs text-ink-500 mt-0.5">{method.desc}</p>
                       </div>
                     </label>
-
-                    {/* Inline VietQR Account Info Details Box */}
-                    {isSelected && method.id === 'vietqr' && (
-                      <div className="px-4 pb-4 pt-1">
-                        <div className="bg-white rounded-xl border border-accent-200/90 p-4 space-y-3 shadow-2xs">
-                          <div className="flex items-center justify-between border-b border-cream-100 pb-2.5">
-                            <div className="flex items-center gap-2">
-                              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                              <span className="text-xs font-bold text-ink-900">
-                                Cổng VietQR {VIETQR_CONFIG.bankName} (Tự động duyệt online)
-                              </span>
-                            </div>
-                            <span className="text-[11px] font-mono text-accent-600 font-bold bg-accent-50 px-2 py-0.5 rounded-md border border-accent-200/60">
-                              Napas 24/7
-                            </span>
-                          </div>
-
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
-                            <div className="bg-cream-50/70 p-2.5 rounded-xl border border-cream-200">
-                              <span className="text-ink-400 text-[11px] block">Ngân hàng thụ hưởng:</span>
-                              <strong className="text-ink-900 font-semibold">{VIETQR_CONFIG.bankFullName}</strong>
-                            </div>
-
-                            <div className="bg-cream-50/70 p-2.5 rounded-xl border border-cream-200 flex items-center justify-between">
-                              <div>
-                                <span className="text-ink-400 text-[11px] block">Số tài khoản:</span>
-                                <strong className="text-accent-600 font-mono text-sm font-bold">
-                                  {VIETQR_CONFIG.accountNo}
-                                </strong>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => handleCopy('stk', VIETQR_CONFIG.accountNo)}
-                                className="px-2.5 py-1 bg-white hover:bg-cream-100 text-accent-700 rounded-lg border border-cream-200 text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer shadow-2xs"
-                              >
-                                {copiedField === 'stk' ? (
-                                  <>
-                                    <Check size={12} className="text-emerald-600" />
-                                    <span className="text-emerald-700">Đã chép</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Copy size={12} />
-                                    <span>Sao chép</span>
-                                  </>
-                                )}
-                              </button>
-                            </div>
-
-                            <div className="bg-cream-50/70 p-2.5 rounded-xl border border-cream-200">
-                              <span className="text-ink-400 text-[11px] block">Chủ tài khoản:</span>
-                              <strong className="text-ink-900 font-bold">{VIETQR_CONFIG.accountName}</strong>
-                            </div>
-
-                            <div className="bg-cream-50/70 p-2.5 rounded-xl border border-cream-200">
-                              <span className="text-ink-400 text-[11px] block">Số tiền thanh toán:</span>
-                              <strong className="text-accent-600 font-bold text-sm font-display">
-                                {formatCurrency(total)}
-                              </strong>
-                            </div>
-                          </div>
-
-                          <div className="text-[11px] text-ink-500 bg-amber-50/60 p-2.5 rounded-xl border border-amber-200/60 flex items-start gap-2">
-                            <Zap size={14} className="text-amber-500 shrink-0 mt-0.5" />
-                            <span>
-                              Mã QR thanh toán chuẩn Napas 24/7 sẽ xuất hiện ngay sau khi bấm "Xác nhận đặt hàng". Hệ thống sẽ tự động đối soát và kích hoạt đơn hàng trong 3 giây.
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 );
               })}

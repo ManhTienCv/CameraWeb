@@ -18,6 +18,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { api } from '../lib/api';
 import type { Page, Address } from '../types';
 import { AddressModal } from '../components/AddressModal';
@@ -29,6 +30,7 @@ interface ProfilePageProps {
 
 export const ProfilePage: React.FC<ProfilePageProps> = ({ initialTab = 'profile', onNavigate }) => {
   const { user, openAuthModal, refreshUser } = useAuth();
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState<'profile' | 'addresses'>(initialTab);
 
   // Profile Form State
@@ -262,13 +264,15 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ initialTab = 'profile'
     try {
       if (editingAddress) {
         await api.updateAddress(editingAddress.id, addressForm);
+        toast.success('Đã cập nhật địa chỉ thành công!');
       } else {
         await api.createAddress(addressForm);
+        toast.success('Đã thêm địa chỉ mới thành công!');
       }
       setIsAddressModalOpen(false);
       fetchAddresses();
     } catch (err: any) {
-      alert(err.message || 'Lỗi khi lưu địa chỉ.');
+      toast.error(err.message || 'Lỗi khi lưu địa chỉ.');
     }
   };
 
@@ -276,18 +280,20 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ initialTab = 'profile'
     if (!window.confirm('Bạn có chắc chắn muốn xóa địa chỉ này?')) return;
     try {
       await api.deleteAddress(id);
+      toast.success('Đã xóa địa chỉ thành công!');
       fetchAddresses();
     } catch (err: any) {
-      alert(err.message || 'Lỗi khi xóa địa chỉ.');
+      toast.error(err.message || 'Lỗi khi xóa địa chỉ.');
     }
   };
 
   const handleSetDefaultAddress = async (addr: Address) => {
     try {
       await api.updateAddress(addr.id, { isDefault: true });
+      toast.success('Đã đặt làm địa chỉ mặc định!');
       fetchAddresses();
     } catch (err: any) {
-      alert(err.message || 'Lỗi khi đặt làm địa chỉ mặc định.');
+      toast.error(err.message || 'Lỗi khi đặt làm địa chỉ mặc định.');
     }
   };
 

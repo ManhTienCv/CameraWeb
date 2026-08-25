@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 
 export const BrandController = {
-  async index(req: Request, res: Response) {
+  async index(_req: Request, res: Response) {
     try {
       const brands = await prisma.brand.findMany({
         orderBy: { name: 'asc' },

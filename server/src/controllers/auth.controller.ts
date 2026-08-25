@@ -96,7 +96,15 @@ export const authController = {
 
       const otp = generateOtp();
       const expiresAt = Date.now() + 5 * 60 * 1000; // 5 mins
-      otpStore.set(`reg:${cleanEmail}`, { otp, expiresAt });
+      const otpKey = `reg:${cleanEmail}`;
+      otpStore.set(otpKey, { otp, expiresAt });
+
+      // Tự động xóa OTP khỏi RAM sau 5 phút để chống Memory Leak
+      setTimeout(() => {
+        if (otpStore.has(otpKey)) {
+          otpStore.delete(otpKey);
+        }
+      }, 5 * 60 * 1000);
 
       // Send OTP via SMTP
       await emailService.sendOtpEmail({
@@ -361,7 +369,14 @@ export const authController = {
 
       const otp = generateOtp();
       const expiresAt = Date.now() + 5 * 60 * 1000;
-      otpStore.set(`change_email:${userId}`, { otp, expiresAt, data: { newEmail: cleanEmail } });
+      const otpKey = `change_email:${userId}`;
+      otpStore.set(otpKey, { otp, expiresAt, data: { newEmail: cleanEmail } });
+
+      setTimeout(() => {
+        if (otpStore.has(otpKey)) {
+          otpStore.delete(otpKey);
+        }
+      }, 5 * 60 * 1000);
 
       await emailService.sendOtpEmail({
         toEmail: cleanEmail,

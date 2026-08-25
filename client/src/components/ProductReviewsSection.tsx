@@ -16,6 +16,7 @@ import {
 import type { Product, Review } from '../types';
 import { reviewService } from '../services/review.service';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 interface Props {
   product: Product;
@@ -31,6 +32,7 @@ const RATING_LABELS: Record<number, string> = {
 
 export function ProductReviewsSection({ product }: Props) {
   const { user } = useAuth();
+  const toast = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -97,7 +99,7 @@ export function ProductReviewsSection({ product }: Props) {
   const handleSubmitReview = (e: React.FormEvent) => {
     e.preventDefault();
     if (!comment.trim()) {
-      alert('Vui lòng nhập nội dung nhận xét của bạn.');
+      toast.warning('Vui lòng nhập nội dung nhận xét của bạn.');
       return;
     }
 
@@ -115,6 +117,7 @@ export function ProductReviewsSection({ product }: Props) {
     setComment('');
     setAttachedImages([]);
     setRating(5);
+    toast.success('Đã gửi đánh giá sản phẩm thành công!');
     loadData();
   };
 

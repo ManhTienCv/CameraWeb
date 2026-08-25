@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { reviewService } from '../services/review.service';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 interface Props {
   isOpen: boolean;
@@ -39,6 +40,7 @@ const RATING_FEEDBACK: Record<number, string> = {
 
 export function OrderRatingModal({ isOpen, onClose, order, onSubmitted }: Props) {
   const { user } = useAuth();
+  const toast = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [rating, setRating] = useState(5);
@@ -103,7 +105,7 @@ export function OrderRatingModal({ isOpen, onClose, order, onSubmitted }: Props)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!comment.trim()) {
-      alert('Vui lòng nhập nhận xét chi tiết của bạn.');
+      toast.warning('Vui lòng nhập nhận xét chi tiết của bạn.');
       return;
     }
 
@@ -122,6 +124,7 @@ export function OrderRatingModal({ isOpen, onClose, order, onSubmitted }: Props)
 
       // Mark order as reviewed
       reviewService.markOrderAsReviewed(order.order_code);
+      toast.success('Cảm ơn bạn đã gửi đánh giá sản phẩm!');
 
       if (onSubmitted) {
         onSubmitted();

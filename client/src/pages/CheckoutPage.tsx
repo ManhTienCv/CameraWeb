@@ -32,6 +32,7 @@ import {
   type ShippingCarrier,
 } from '../services/shipping.service';
 import { vietqrService, VIETQR_CONFIG } from '../services/vietqr.service';
+import { useToast } from '../context/ToastContext';
 
 interface Props {
   onNavigate: (page: Page) => void;
@@ -42,6 +43,7 @@ const CHECKOUT_DURATION_SECONDS = 15 * 60; // 15 minutes session
 export function CheckoutPage({ onNavigate }: Props) {
   const { items, subtotal, clearCart } = useCart();
   const { user } = useAuth();
+  const toast = useToast();
 
   const [submitting, setSubmitting] = useState(false);
   const [isMapOpen, setIsMapOpen] = useState(false);
@@ -187,7 +189,7 @@ export function CheckoutPage({ onNavigate }: Props) {
       onNavigate({ name: 'order-success', orderId: order.id });
     } catch (err) {
       console.error('Failed to create order:', err);
-      alert('Không thể tạo đơn hàng. Vui lòng kiểm tra lại thông tin.');
+      toast.error('Không thể tạo đơn hàng. Vui lòng kiểm tra lại thông tin.');
     } finally {
       setSubmitting(false);
     }

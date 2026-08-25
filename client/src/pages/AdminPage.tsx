@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle, X } from 'lucide-react';
 import type { Product, Category, Order, Page } from '../types';
 import { api } from '../lib/api';
+import { useToast } from '../context/ToastContext';
 
 import { AdminSidebar, type AdminTab } from '../components/admin/AdminSidebar';
 import { AdminHeader } from '../components/admin/AdminHeader';
@@ -26,25 +26,13 @@ interface AdminPageProps {
 
 export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, initialTab = 'dashboard' }) => {
   const [activeTab, setActiveTab] = useState<AdminTab>(initialTab);
+  const toast = useToast();
 
   // Data states
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Success Banner State
-  const [successBanner, setSuccessBanner] = useState<string | null>(null);
-
-  // Auto-hide success banner after 3.5 seconds
-  useEffect(() => {
-    if (successBanner) {
-      const timer = setTimeout(() => {
-        setSuccessBanner(null);
-      }, 3500);
-      return () => clearTimeout(timer);
-    }
-  }, [successBanner]);
 
   // Product Modals
   const [showProductModal, setShowProductModal] = useState(false);
@@ -171,15 +159,15 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, initialTab = '
 
       if (editingProduct) {
         await api.updateProduct(editingProduct.id, payload);
-        setSuccessBanner(`Sản phẩm "${productFormData.name}" đã được cập nhật thành công!`);
+        toast.success(`Sản phẩm "${productFormData.name}" đã được cập nhật thành công!`);
       } else {
         await api.createProduct(payload);
-        setSuccessBanner(`Sản phẩm "${productFormData.name}" đã được thêm mới thành công!`);
+        toast.success(`Sản phẩm "${productFormData.name}" đã được thêm mới thành công!`);
       }
       setShowProductModal(false);
       loadData();
     } catch {
-      alert('Có lỗi xảy ra khi lưu sản phẩm!');
+      toast.error('Có lỗi xảy ra khi lưu sản phẩm!');
     }
   };
 
@@ -188,11 +176,11 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, initialTab = '
     try {
       const prod = products.find((p) => p.id === deletingProductId);
       await api.deleteProduct(deletingProductId);
-      setSuccessBanner(`Đã xóa sản phẩm "${prod?.name || ''}" thành công!`);
+      toast.success(`Đã xóa sản phẩm "${prod?.name || ''}" thành công!`);
       setDeletingProductId(null);
       loadData();
     } catch {
-      alert('Không thể xóa sản phẩm!');
+      toast.error('Không thể xóa sản phẩm!');
     }
   };
 
@@ -200,14 +188,14 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, initialTab = '
     const newStatus = product.status === 'active' ? 'inactive' : 'active';
     try {
       await api.updateProduct(product.id, { status: newStatus });
-      setSuccessBanner(
-        `Đã đổi trạng thái sản phẩm "${product.name}" sang ${
+      toast.success(
+        `Đã đổi trạng thái "${product.name}" sang ${
           newStatus === 'active' ? 'Đang bán' : 'Tạm ẩn'
         }!`
       );
       loadData();
     } catch {
-      alert('Không thể đổi trạng thái!');
+      toast.error('Không thể đổi trạng thái sản phẩm!');
     }
   };
 
@@ -229,15 +217,15 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, initialTab = '
     try {
       if (editingCategory) {
         await api.updateCategory(editingCategory.id, categoryFormData);
-        setSuccessBanner(`Danh mục "${categoryFormData.name}" đã được cập nhật thành công!`);
+        toast.success(`Danh mục "${categoryFormData.name}" đã được cập nhật thành công!`);
       } else {
         await api.createCategory(categoryFormData);
-        setSuccessBanner(`Danh mục "${categoryFormData.name}" đã được tạo mới thành công!`);
+        toast.success(`Danh mục "${categoryFormData.name}" đã được tạo mới thành công!`);
       }
       setShowCategoryModal(false);
       loadData();
     } catch {
-      alert('Có lỗi khi lưu danh mục!');
+      toast.error('Có lỗi khi lưu danh mục!');
     }
   };
 
@@ -245,11 +233,11 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, initialTab = '
     if (!deletingCategoryId) return;
     try {
       await api.deleteCategory(deletingCategoryId);
-      setSuccessBanner('Đã xóa danh mục thành công!');
+      toast.success('Đã xóa danh mục thành công!');
       setDeletingCategoryId(null);
       loadData();
     } catch {
-      alert('Không thể xóa danh mục!');
+      toast.error('Không thể xóa danh mục!');
     }
   };
 
@@ -257,10 +245,10 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, initialTab = '
   const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
     try {
       await api.updateOrderStatus(orderId, newStatus);
-      setSuccessBanner(`Đã cập nhật trạng thái đơn hàng sang "${newStatus}"!`);
+      toast.success(`Đã cập nhật trạng thái đơn hàng sang "${newStatus}"!`);
       loadData();
     } catch {
-      alert('Không thể cập nhật trạng thái đơn hàng!');
+      toast.error('Không thể cập nhật trạng thái đơn hàng!');
     }
   };
 
@@ -274,18 +262,6 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, initialTab = '
         <AdminHeader onNavigate={onNavigate} />
 
         <main className="p-8 flex-1">
-          {/* Success Banner */}
-          {successBanner && (
-            <div className="bg-cream-100 border border-accent-200 text-ink-800 rounded-2xl p-4 mb-6 flex items-center justify-between shadow-xs animate-fade-in">
-              <div className="flex items-center gap-3">
-                <CheckCircle size={20} className="text-accent-500" />
-                <span className="text-sm font-medium">{successBanner}</span>
-              </div>
-              <button onClick={() => setSuccessBanner(null)} className="text-ink-400 hover:text-ink-700 p-1">
-                <X size={18} />
-              </button>
-            </div>
-          )}
 
           {activeTab === 'dashboard' && (
             <AdminDashboardTab
@@ -333,7 +309,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, initialTab = '
           {activeTab === 'settings' && (
             <AdminSettingsTab
               onSaveSuccess={() =>
-                setSuccessBanner('Cài đặt hệ thống cửa hàng đã được lưu thành công!')
+                toast.success('Cài đặt hệ thống cửa hàng đã được lưu thành công!')
               }
             />
           )}

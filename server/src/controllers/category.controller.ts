@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 
 export const CategoryController = {
-  async index(req: Request, res: Response) {
+  async index(_req: Request, res: Response) {
     try {
       const categories = await prisma.category.findMany({
         orderBy: { displayOrder: 'asc' },

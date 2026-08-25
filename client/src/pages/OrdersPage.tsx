@@ -13,6 +13,7 @@ import {
   Edit3,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { formatCurrency } from '../lib/utils';
 import type { Page } from '../types';
 import { OrderRatingModal } from '../components/OrderRatingModal';
@@ -57,6 +58,7 @@ interface EnhancedOrder {
 
 export const OrdersPage: React.FC<OrdersPageProps> = ({ onNavigate }) => {
   const { user, openAuthModal } = useAuth();
+  const toast = useToast();
   const [orderStatusTab, setOrderStatusTab] = useState<OrderStatusTab>('pending');
 
   // Tracking Journey Modal State
@@ -222,7 +224,7 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ onNavigate }) => {
   };
 
   const handleRepurchase = (order: EnhancedOrder) => {
-    alert(`Đã thêm ${order.items.length} sản phẩm từ đơn ${order.order_code} vào giỏ hàng!`);
+    toast.success(`Đã thêm ${order.items.length} sản phẩm từ đơn ${order.order_code} vào giỏ hàng!`);
     onNavigate({ name: 'cart' });
   };
 

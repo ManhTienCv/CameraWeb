@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { CartProvider } from './context/CartContext';
 import { AuthProvider } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
 import { AuthModal } from './components/AuthModal';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
@@ -43,36 +44,51 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
-  if (page.name === 'admin') {
-    return <AdminPage onNavigate={navigate} initialTab={page.tab || 'dashboard'} />;
-  }
-
   return (
-    <AuthProvider>
-      <CartProvider>
-        <div className="min-h-screen flex flex-col bg-cream-50">
-          <Header onNavigate={navigate} currentPage={page} categories={categories} />
+    <ToastProvider>
+      <AuthProvider>
+        <CartProvider>
+          {page.name === 'admin' ? (
+            <AdminPage onNavigate={navigate} initialTab={page.tab || 'dashboard'} />
+          ) : (
+            <div className="min-h-screen flex flex-col bg-cream-50">
+              <Header onNavigate={navigate} currentPage={page} categories={categories} />
 
-          <main className="flex-1">
-            {page.name === 'home' && <HomePage onNavigate={navigate} categories={categories} />}
-            {page.name === 'catalog' && (
-              <CatalogPage onNavigate={navigate} categories={categories} categorySlug={page.categorySlug} />
-            )}
-            {page.name === 'product' && (
-              <ProductDetailPage slug={page.slug} onNavigate={navigate} categories={categories} />
-            )}
-            {page.name === 'cart' && <CartPage onNavigate={navigate} />}
-            {page.name === 'checkout' && <CheckoutPage onNavigate={navigate} />}
-            {page.name === 'order-success' && <OrderSuccessPage orderId={page.orderId} onNavigate={navigate} />}
-            {page.name === 'search' && <SearchPage query={page.query} onNavigate={navigate} />}
-            {page.name === 'orders' && <OrdersPage onNavigate={navigate} />}
-            {page.name === 'profile' && <ProfilePage initialTab={page.tab || 'profile'} onNavigate={navigate} />}
-          </main>
+              <main className="flex-1">
+                {page.name === 'home' && <HomePage onNavigate={navigate} categories={categories} />}
+                {page.name === 'catalog' && (
+                  <CatalogPage
+                    onNavigate={navigate}
+                    categories={categories}
+                    categorySlug={page.categorySlug}
+                  />
+                )}
+                {page.name === 'product' && (
+                  <ProductDetailPage
+                    slug={page.slug}
+                    onNavigate={navigate}
+                    categories={categories}
+                  />
+                )}
+                {page.name === 'cart' && <CartPage onNavigate={navigate} />}
+                {page.name === 'checkout' && <CheckoutPage onNavigate={navigate} />}
+                {page.name === 'order-success' && (
+                  <OrderSuccessPage orderId={page.orderId} onNavigate={navigate} />
+                )}
+                {page.name === 'search' && <SearchPage query={page.query} onNavigate={navigate} />}
+                {page.name === 'orders' && <OrdersPage onNavigate={navigate} />}
+                {page.name === 'profile' && (
+                  <ProfilePage initialTab={page.tab || 'profile'} onNavigate={navigate} />
+                )}
+              </main>
 
-          <Footer onNavigate={navigate} categories={categories} />
-          <AuthModal />
-        </div>
-      </CartProvider>
-    </AuthProvider>
+              <Footer onNavigate={navigate} categories={categories} />
+              <AuthModal />
+            </div>
+          )}
+        </CartProvider>
+      </AuthProvider>
+    </ToastProvider>
   );
 }
+

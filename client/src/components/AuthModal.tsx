@@ -17,11 +17,13 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { api } from '../lib/api';
 
 export const AuthModal: React.FC = () => {
   const { isAuthModalOpen, authModalTab, closeAuthModal, openAuthModal, login, registerWithOtp } =
     useAuth();
+  const toast = useToast();
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState('');
@@ -339,7 +341,7 @@ export const AuthModal: React.FC = () => {
                     <label className="text-xs font-bold text-ink-700">Mật khẩu</label>
                     <button
                       type="button"
-                      onClick={() => alert('Vui lòng liên hệ hotline 1900-8888 để được hỗ trợ đặt lại mật khẩu.')}
+                      onClick={() => toast.info('Vui lòng liên hệ hotline 1900-8888 để được hỗ trợ đặt lại mật khẩu.')}
                       className="text-[11px] font-bold text-accent-600 hover:text-accent-700 hover:underline cursor-pointer"
                     >
                       Quên mật khẩu?

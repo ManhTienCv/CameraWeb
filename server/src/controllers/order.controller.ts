@@ -54,6 +54,14 @@ export const OrderController = {
         req.header('X-Session-ID') || (req.body.session_id as string) || 'guest_session';
       const orderCode = `CAM-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
 
+      // Lấy tất cả sản phẩm trong 1 query (Chống N+1)
+      const productIds = items.map((i: any) => i.product_id).filter(Boolean);
+      const products = await prisma.product.findMany({
+        where: { id: { in: productIds } },
+      });
+
+      const productMap = new Map(products.map((p) => [p.id, p]));
+
       let totalAmount = 0;
       const orderItemsToCreate: Array<{
         productId: string;
@@ -63,14 +71,21 @@ export const OrderController = {
         imageUrl: string;
       }> = [];
 
-      for (const item of items) {
-        const product = await prisma.product.findUnique({
-          where: { id: item.product_id },
-        });
+      const stockUpdates: Array<{ id: string; qty: number }> = [];
 
+      for (const item of items) {
+        const product = productMap.get(item.product_id);
         if (!product) continue;
 
         const qty = Math.max(1, parseInt(item.quantity || 1, 10));
+
+        // Kiểm tra tồn kho
+        if (product.stock < qty) {
+          return res.status(400).json({ 
+            message: `Sản phẩm "${product.name}" không đủ số lượng. Kho chỉ còn ${product.stock} sản phẩm.` 
+          });
+        }
+
         const price = product.price;
         totalAmount += price * qty;
 
@@ -81,6 +96,8 @@ export const OrderController = {
           quantity: qty,
           imageUrl: product.imageUrl || '',
         });
+
+        stockUpdates.push({ id: product.id, qty });
       }
 
       if (orderItemsToCreate.length === 0) {
@@ -116,6 +133,14 @@ export const OrderController = {
       const cart = await prisma.cart.findUnique({ where: { sessionId } });
       if (cart) {
         await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
+      }
+
+      // Trừ số lượng tồn kho
+      for (const update of stockUpdates) {
+        await prisma.product.update({
+          where: { id: update.id },
+          data: { stock: { decrement: update.qty } },
+        });
       }
 
       // Asynchronously send confirmation email in background (non-blocking)
@@ -166,7 +191,7 @@ export const OrderController = {
     }
   },
 
-  async index(req: Request, res: Response) {
+  async index(_req: Request, res: Response) {
     try {
       const orders = await prisma.order.findMany({
         orderBy: { createdAt: 'desc' },
@@ -224,8 +249,11 @@ export const OrderController = {
         message: 'Cập nhật trạng thái đơn hàng thành công!',
         order,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating order status:', error);
+      if (error.code === 'P2025') {
+        return res.status(404).json({ message: 'Không tìm thấy đơn hàng để cập nhật' });
+      }
       return res.status(500).json({ message: 'Internal Server Error' });
     }
   },

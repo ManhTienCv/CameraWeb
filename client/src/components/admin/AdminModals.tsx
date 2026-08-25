@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X, Trash2, Upload } from 'lucide-react';
 import type { Product, Category, Order } from '../../types';
 import { formatCurrency } from '../../lib/utils';
+import { useToast } from '../../context/ToastContext';
 
 // 1. PRODUCT FORM MODAL
 interface ProductFormModalProps {
@@ -39,6 +40,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+  const toast = useToast();
 
   if (!show) return null;
 
@@ -46,7 +48,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        alert('Dung lượng ảnh vượt quá 5MB. Vui lòng chọn ảnh nhỏ hơn!');
+        toast.warning('Dung lượng ảnh vượt quá 5MB. Vui lòng chọn ảnh nhỏ hơn!');
         return;
       }
       const reader = new FileReader();

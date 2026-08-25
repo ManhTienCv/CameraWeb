@@ -14,6 +14,7 @@ import {
   Building,
   Home,
 } from 'lucide-react';
+import { useToast } from '../context/ToastContext';
 
 export interface SelectedLocationData {
   fullAddress: string;
@@ -57,6 +58,7 @@ export function MapLocationPicker({
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
   const currentTileLayerRef = useRef<L.TileLayer | null>(null);
+  const toast = useToast();
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -248,7 +250,7 @@ export function MapLocationPicker({
   // Get User GPS Position
   const handleGetCurrentLocation = () => {
     if (!navigator.geolocation) {
-      alert('Trình duyệt của bạn không hỗ trợ định vị GPS.');
+      toast.warning('Trình duyệt của bạn không hỗ trợ định vị GPS.');
       return;
     }
 
@@ -268,7 +270,7 @@ export function MapLocationPicker({
       },
       (error) => {
         console.warn('GPS location error:', error);
-        alert('Không thể lấy vị trí hiện tại. Vui lòng cho phép quyền truy cập vị trí trên trình duyệt.');
+        toast.error('Không thể lấy vị trí hiện tại. Vui lòng cho phép quyền truy cập vị trí trên trình duyệt.');
         setIsLocating(false);
       },
       { enableHighAccuracy: true, timeout: 8000 }

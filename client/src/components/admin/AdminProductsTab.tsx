@@ -126,7 +126,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
             Quản lý Sản phẩm Camera
           </h2>
           <p className="text-sm text-ink-500 mt-0.5">
-            Quản lý danh sách máy ảnh, ống kính, flycam và thông số bán hàng
+            Quản lý danh sách máy ảnh mirrorless, DSLR, compact, ống kính và thông số bán hàng
           </p>
         </div>
 

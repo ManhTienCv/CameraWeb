@@ -1,6 +1,6 @@
 # 📷 CameraHub - Nền Tảng Thương Mại Điện Tử Máy Ảnh & Thiết Bị Nhiếp Ảnh
 
-> **CameraHub** là nền tảng thương mại điện tử Full-Stack hiện đại dành cho thiết bị máy ảnh, ống kính và flycam cao cấp. Dự án được phát triển với kiến trúc **React 18 + Node.js (Express) + TypeScript + Prisma ORM + PostgreSQL**, tích hợp hệ thống thanh toán thông minh **VietQR**, bảo mật **Email OTP qua Google SMTP** và trang quản trị **Admin Dashboard** toàn diện.
+> **CameraHub** là nền tảng thương mại điện tử Full-Stack hiện đại dành cho thiết bị máy ảnh, ống kính và phụ kiện nhiếp ảnh cao cấp. Dự án được phát triển với kiến trúc **React 18 + Node.js (Express) + TypeScript + Prisma ORM + PostgreSQL**, tích hợp hệ thống thanh toán thông minh **VietQR**, bảo mật **Email OTP qua Google SMTP** và trang quản trị **Admin Dashboard** toàn diện.
 
 ---
 
@@ -8,7 +8,7 @@
 
 ### 🛒 1. Trải Nghiệm Khách Hàng (Storefront E-Commerce)
 - **Trang chủ & Khám phá**: Hero Banner sống động, Danh mục nổi bật, Bộ sưu tập sản phẩm Flash Sale, Hàng mới về và Sản phẩm bán chạy.
-- **Danh mục & Bộ lọc đa năng (Catalog)**: Lọc sản phẩm theo Danh mục, Thương hiệu (Sony, Canon, Nikon, Fujifilm, DJI...), lọc theo khoảng giá, phân trang chuẩn 10 sản phẩm/trang.
+- **Danh mục & Bộ lọc đa năng (Catalog)**: Lọc sản phẩm theo Danh mục, Thương hiệu (Sony, Canon, Nikon, Fujifilm, Leica, Ricoh, Sigma, Tamron...), lọc theo khoảng giá, phân trang chuẩn 10 sản phẩm/trang.
 - **Chi tiết sản phẩm (Product Detail)**: Album ảnh Gallery đa góc chụp, Thông số kỹ thuật (Specs), Tính năng nổi bật (Features), chọn số lượng và sản phẩm tương tự liên quan.
 - **Đánh giá & Bình luận (Reviews)**: Hệ thống chấm sao (1-5★), phản hồi kèm hình ảnh thực tế và gắn nhãn *Đã mua hàng chính hãng*.
 - **Giỏ hàng & Quản lý phiên (Cart & Session)**: Tự động lưu giỏ hàng theo Session, hỗ trợ cập nhật số lượng và tính toán phí vận chuyển realtime.

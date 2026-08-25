@@ -23,9 +23,8 @@ interface AdminCategoriesTabProps {
 }
 
 const getCategoryIcon = (slug: string, iconName?: string | null) => {
-  if (slug.includes('mirrorless') || slug.includes('dslr') || iconName === 'Camera') return Camera;
+  if (slug.includes('mirrorless') || slug.includes('dslr') || slug.includes('compact') || iconName === 'Camera') return Camera;
   if (slug.includes('ong-kinh') || slug.includes('lens') || iconName === 'Disc') return Disc;
-  if (slug.includes('flycam') || slug.includes('drone') || iconName === 'Navigation') return Navigation;
   return Briefcase;
 };
 
@@ -58,7 +57,7 @@ export const AdminCategoriesTab: React.FC<AdminCategoriesTabProps> = ({
             Quản lý Danh mục Sản phẩm
           </h2>
           <p className="text-sm text-ink-500 mt-0.5">
-            Phân loại máy ảnh, ống kính, flycam và phụ kiện để khách hàng dễ dàng tìm kiếm
+            Phân loại máy ảnh mirrorless, DSLR, compact, ống kính và phụ kiện nhiếp ảnh
           </p>
         </div>
 

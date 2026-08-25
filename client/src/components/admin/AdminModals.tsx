@@ -560,7 +560,7 @@ export const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
               required
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="Ví dụ: Phụ kiện Flycam"
+              placeholder="Ví dụ: Máy ảnh Compact & Vlog"
               className="input-field text-sm"
             />
           </div>

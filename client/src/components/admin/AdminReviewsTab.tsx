@@ -38,9 +38,9 @@ export const AdminReviewsTab: React.FC = () => {
             </div>
             <span className="text-xs font-bold text-ink-400">Lê Minh Trí</span>
           </div>
-          <h4 className="font-bold text-ink-900 text-sm">Flycam DJI Mini 4 Pro</h4>
+          <h4 className="font-bold text-ink-900 text-sm">Máy ảnh Fujifilm X-T5 (Body)</h4>
           <p className="text-xs text-ink-600 mt-2 leading-relaxed">
-            "Flycam siêu nhẹ, bay rất kháng gió và chống va chạm thông minh 360 độ an tâm tuyệt đối."
+            "Máy thiết kế Retro siêu đẹp, cảm biến 40MP chụp siêu nét và màu phim Classic Chrome đỉnh cao."
           </p>
         </div>
       </div>

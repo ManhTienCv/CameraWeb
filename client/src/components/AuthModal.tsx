@@ -262,7 +262,7 @@ export const AuthModal: React.FC = () => {
                   : 'Trở thành hội viên chính thức ngay hôm nay'}
               </h3>
               <p className="text-xs text-cream-100/80 leading-relaxed font-normal">
-                Khám phá hệ sinh thái máy ảnh, ống kính và flycam chính hãng với chính sách bảo hành và ưu đãi độc quyền dành riêng cho bạn.
+                Khám phá hệ sinh thái máy ảnh, ống kính và phụ kiện nhiếp ảnh chính hãng với chính sách bảo hành và ưu đãi độc quyền dành riêng cho bạn.
               </p>
             </div>
 

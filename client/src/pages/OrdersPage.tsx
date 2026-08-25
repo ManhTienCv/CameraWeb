@@ -161,11 +161,11 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ onNavigate }) => {
       statusLabel: 'Đã Giao Thành Công',
       items: [
         {
-          categoryTag: 'Thiết bị',
-          name: 'Flycam DJI Mini 4 Pro (DJI RC 2 Smart Controller)',
+          categoryTag: 'Compact',
+          name: 'Canon PowerShot G7 X Mark III (Vlog & LiveStream)',
           quantity: 1,
-          price: 19890000,
-          image_url: 'https://images.unsplash.com/photo-1527977966376-1c8408f9f108?auto=format&fit=crop&q=80&w=600',
+          price: 19990000,
+          image_url: 'https://images.unsplash.com/photo-1502920917128-1aa500764cbd?auto=format&fit=crop&q=80&w=600',
         },
       ],
       recipientName: 'Lê Minh Tuấn',

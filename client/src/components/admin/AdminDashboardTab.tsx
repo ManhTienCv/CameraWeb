@@ -61,7 +61,7 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({
   const brandShares = [
     { name: 'Sony Alpha', share: 42, color: 'bg-accent-500', count: '145.2M đ' },
     { name: 'Canon EOS', share: 28, color: 'bg-rose-500', count: '96.8M đ' },
-    { name: 'DJI Drone', share: 18, color: 'bg-emerald-500', count: '62.2M đ' },
+    { name: 'Nikon & Leica', share: 18, color: 'bg-emerald-500', count: '62.2M đ' },
     { name: 'Fujifilm & Khác', share: 12, color: 'bg-indigo-500', count: '41.6M đ' },
   ];
 

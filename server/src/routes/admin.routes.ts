@@ -4,6 +4,8 @@ import { CategoryController } from '../controllers/category.controller';
 import { OrderController } from '../controllers/order.controller';
 import { authenticateToken } from '../middlewares/auth.middleware';
 import { requireAdmin } from '../middlewares/admin.middleware';
+import analyticsRoutes from './analytics.routes';
+import adminUserRoutes from './admin-user.routes';
 
 const router = Router();
 
@@ -23,5 +25,12 @@ router.delete('/categories/:id', CategoryController.destroy);
 // Order Admin
 router.get('/orders', OrderController.index);
 router.put('/orders/:id', OrderController.updateStatus);
+router.post('/orders/:id/confirm-refund', OrderController.confirmRefund);
+
+// Analytics & Reports Admin
+router.use('/analytics', analyticsRoutes);
+
+// User Management Admin
+router.use('/users', adminUserRoutes);
 
 export default router;

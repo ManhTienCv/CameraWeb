@@ -37,6 +37,29 @@ export interface ShippingNotificationData {
   statusDesc: string;
 }
 
+export interface RefundRequestEmailData {
+  orderCode: string;
+  customerName: string;
+  customerEmail: string;
+  totalAmount: number;
+  refundBankName: string;
+  refundAccountNumber: string;
+  refundAccountHolder: string;
+  reason: string;
+}
+
+export interface RefundCompletedEmailData {
+  orderCode: string;
+  customerName: string;
+  customerEmail: string;
+  totalAmount: number;
+  refundBankName: string;
+  refundAccountNumber: string;
+  refundAccountHolder: string;
+  refundTransactionCode?: string;
+  refundNote?: string;
+}
+
 function formatVND(amount: number): string {
   return new Intl.NumberFormat('vi-VN', {
     style: 'currency',
@@ -373,6 +396,163 @@ class EmailService {
       return true;
     } catch (err) {
       console.error('❌ [EmailService] Failed to send order email:', err);
+      return false;
+    }
+  }
+
+  /**
+   * 4. Gửi Email Xác Nhận Tiếp Nhận Yêu Cầu Hoàn Tiền
+   */
+  public async sendRefundRequestNotification(data: RefundRequestEmailData): Promise<boolean> {
+    const fromAddress = process.env.SMTP_FROM || 'CameraHub Store <nvmtein@gmail.com>';
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: #f8fafc; color: #1e293b; }
+    .container { max-width: 600px; margin: 24px auto; background: #ffffff; border-radius: 20px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05); }
+    .header { background: #1e1b4b; padding: 30px 24px; text-align: center; color: #ffffff; }
+    .header h1 { margin: 0; font-size: 24px; font-weight: 800; }
+    .content { padding: 28px; }
+    .status-badge { display: inline-block; padding: 6px 16px; background: #8b5cf6; color: #ffffff; border-radius: 20px; font-size: 12px; font-weight: 700; }
+    .info-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 18px; margin: 20px 0; font-size: 13px; line-height: 1.8; }
+    .footer { background: #f8fafc; padding: 20px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📷 CAMERAHUB VIỆT NAM</h1>
+      <p style="margin: 4px 0 0; color: #c7d2fe; font-size: 13px;">Thông Báo Tiếp Nhận Yêu Cầu Hoàn Tiền</p>
+    </div>
+
+    <div class="content">
+      <div style="margin-bottom: 16px;">
+        <span class="status-badge">🔄 CHỜ HOÀN TIỀN (REFUND PENDING)</span>
+      </div>
+
+      <h2 style="font-size: 20px; color: #0f172a; margin: 0 0 8px;">Đã Tiếp Nhận Yêu Cầu Hủy Đơn & Hoàn Tiền</h2>
+      <p style="font-size: 14px; color: #475569; line-height: 1.6;">
+        Xin chào <strong>${data.customerName}</strong>,<br>
+        Hệ thống CameraHub đã tiếp nhận yêu cầu hủy đơn hàng trực tuyến của bạn. Do đơn hàng đã được thanh toán online thành công, khoản tiền sẽ được bộ phận Kế toán đối soát và chuyển khoản hoàn trả về tài khoản thụ hưởng bạn đã cung cấp.
+      </p>
+
+      <div class="info-card">
+        <strong>Mã đơn hàng:</strong> <span style="color: #7c3aed; font-weight: 800;">#${data.orderCode}</span><br>
+        <strong>Số tiền cần hoàn:</strong> <span style="color: #ea580c; font-size: 16px; font-weight: 800;">${formatVND(data.totalAmount)}</span><br>
+        <strong>Ngân hàng / Ví nhận tiền:</strong> ${data.refundBankName}<br>
+        <strong>Số tài khoản / SĐT MoMo:</strong> <span style="font-family: monospace; font-weight: 700;">${data.refundAccountNumber}</span><br>
+        <strong>Chủ tài khoản:</strong> <strong>${data.refundAccountHolder}</strong><br>
+        <strong>Lý do hủy đơn:</strong> ${data.reason}
+      </div>
+
+      <div style="background: #faf5ff; border: 1px dashed #d8b4fe; border-radius: 12px; padding: 14px; font-size: 13px; color: #6b21a8; line-height: 1.6;">
+        ⏱️ <strong>Thời gian dự kiến hoàn tiền:</strong> Trong vòng <strong>24h đến 48h làm việc</strong> (không tính Thứ 7, Chủ Nhật). Ngay khi kế toán chuyển khoản hoàn tất, bạn sẽ nhận được email biên lai giao dịch thành công.
+      </div>
+    </div>
+
+    <div class="footer">
+      © ${new Date().getFullYear()} CameraHub Store • Hotline: 1900 6868
+    </div>
+  </div>
+</body>
+</html>
+    `;
+
+    try {
+      if (this.transporter && this.isConfigured) {
+        const info = await this.transporter.sendMail({
+          from: fromAddress,
+          to: data.customerEmail,
+          subject: `🔄 [CameraHub] Đã tiếp nhận yêu cầu hoàn tiền đơn hàng #${data.orderCode}`,
+          html: htmlContent,
+        });
+        console.log(`✉️ [EmailService] Refund request notification email sent to ${data.customerEmail}. Message ID: ${info.messageId}`);
+      }
+      return true;
+    } catch (err) {
+      console.error('❌ [EmailService] Failed to send refund request email:', err);
+      return false;
+    }
+  }
+
+  /**
+   * 5. Gửi Email Xác Nhận Đã Hoàn Tiền Thành Công Cho Khách
+   */
+  public async sendRefundCompletedNotification(data: RefundCompletedEmailData): Promise<boolean> {
+    const fromAddress = process.env.SMTP_FROM || 'CameraHub Store <nvmtein@gmail.com>';
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: #f8fafc; color: #1e293b; }
+    .container { max-width: 600px; margin: 24px auto; background: #ffffff; border-radius: 20px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05); }
+    .header { background: #064e3b; padding: 30px 24px; text-align: center; color: #ffffff; }
+    .header h1 { margin: 0; font-size: 24px; font-weight: 800; }
+    .content { padding: 28px; }
+    .status-badge { display: inline-block; padding: 6px 16px; background: #10b981; color: #ffffff; border-radius: 20px; font-size: 12px; font-weight: 700; }
+    .info-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 18px; margin: 20px 0; font-size: 13px; line-height: 1.8; }
+    .footer { background: #f8fafc; padding: 20px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📷 CAMERAHUB VIỆT NAM</h1>
+      <p style="margin: 4px 0 0; color: #a7f3d0; font-size: 13px;">Biên Lai Hoàn Tiền Thành Công</p>
+    </div>
+
+    <div class="content">
+      <div style="margin-bottom: 16px;">
+        <span class="status-badge">✅ HOÀN TIỀN THÀNH CÔNG (REFUNDED)</span>
+      </div>
+
+      <h2 style="font-size: 20px; color: #0f172a; margin: 0 0 8px;">Đã Chuyển Khoản Hoàn Trả Tiền Thành Công</h2>
+      <p style="font-size: 14px; color: #475569; line-height: 1.6;">
+        Xin chào <strong>${data.customerName}</strong>,<br>
+        Ban quản trị và Kế toán CameraHub xác nhận đã hoàn tất lệnh chuyển khoản hoàn tiền cho đơn hàng <strong>#${data.orderCode}</strong> của bạn.
+      </p>
+
+      <div class="info-card">
+        <strong>Mã đơn hàng:</strong> <span style="color: #065f46; font-weight: 800;">#${data.orderCode}</span><br>
+        <strong>Số tiền đã hoàn trả:</strong> <span style="color: #059669; font-size: 16px; font-weight: 800;">${formatVND(data.totalAmount)}</span><br>
+        <strong>Tài khoản thụ hưởng:</strong> ${data.refundBankName} (${data.refundAccountNumber} - ${data.refundAccountHolder})<br>
+        <strong>Mã giao dịch đối soát ngân hàng:</strong> <span style="font-family: monospace; font-weight: 700; color: #1e293b;">${data.refundTransactionCode || 'Chuyển khoản nội bộ'}</span><br>
+        ${data.refundNote ? `<strong>Ghi chú:</strong> ${data.refundNote}<br>` : ''}
+      </div>
+
+      <p style="font-size: 13px; color: #475569; line-height: 1.6;">
+        Vui lòng kiểm tra biến động số dư trong tài khoản ngân hàng hoặc ví điện tử của bạn. Nếu sau 24h chưa nhận được biến động số dư, quý khách vui lòng liên hệ ngay với hotline <strong>1900 6868</strong> để được hỗ trợ tra soát giao dịch.
+      </p>
+    </div>
+
+    <div class="footer">
+      © ${new Date().getFullYear()} CameraHub Store • Hotline: 1900 6868
+    </div>
+  </div>
+</body>
+</html>
+    `;
+
+    try {
+      if (this.transporter && this.isConfigured) {
+        const info = await this.transporter.sendMail({
+          from: fromAddress,
+          to: data.customerEmail,
+          subject: `✅ [CameraHub] Đã hoàn tiền thành công đơn hàng #${data.orderCode} (${formatVND(data.totalAmount)})`,
+          html: htmlContent,
+        });
+        console.log(`✉️ [EmailService] Refund completed email sent to ${data.customerEmail}. Message ID: ${info.messageId}`);
+      }
+      return true;
+    } catch (err) {
+      console.error('❌ [EmailService] Failed to send refund completed email:', err);
       return false;
     }
   }

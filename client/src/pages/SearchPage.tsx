@@ -16,18 +16,28 @@ export function SearchPage({ query, onNavigate }: Props) {
   const itemsPerPage = 10;
 
   useEffect(() => {
+    const controller = new AbortController();
+
     (async () => {
       setLoading(true);
       setCurrentPage(1);
       try {
-        const data = await api.searchProducts(query);
+        const data = await api.searchProducts(query, { signal: controller.signal });
         setProducts(data);
-      } catch (err) {
-        console.error('Failed to search products:', err);
+      } catch (err: any) {
+        if (err?.name !== 'AbortError') {
+          console.error('Failed to search products:', err);
+        }
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
     })();
+
+    return () => {
+      controller.abort();
+    };
   }, [query]);
 
   const totalPages = Math.ceil(products.length / itemsPerPage);

@@ -60,6 +60,7 @@ export const ProductController = {
       const { category, brand, q, sort, include_inactive } = req.query;
 
       const where: any = {};
+      const andConditions: any[] = [];
 
       if (!include_inactive) {
         where.status = 'active';
@@ -71,20 +72,31 @@ export const ProductController = {
         };
       }
 
-      if (brand && typeof brand === 'string') {
-        where.OR = [
-          { brand: { contains: brand } },
-          { brandModel: { slug: brand } },
-        ];
+      const trimmedBrand = typeof brand === 'string' ? brand.trim() : '';
+      if (trimmedBrand) {
+        andConditions.push({
+          OR: [
+            { brand: { contains: trimmedBrand, mode: 'insensitive' } },
+            { brandModel: { slug: trimmedBrand } },
+          ],
+        });
       }
 
-      if (q && typeof q === 'string') {
-        where.OR = [
-          { name: { contains: q } },
-          { description: { contains: q } },
-          { sku: { contains: q } },
-        ];
+      const trimmedQ = typeof q === 'string' ? q.trim() : '';
+      if (trimmedQ) {
+        andConditions.push({
+          OR: [
+            { name: { contains: trimmedQ, mode: 'insensitive' } },
+            { description: { contains: trimmedQ, mode: 'insensitive' } },
+            { sku: { contains: trimmedQ, mode: 'insensitive' } },
+          ],
+        });
       }
+
+      if (andConditions.length > 0) {
+        where.AND = andConditions;
+      }
+
 
       let orderBy: any = { createdAt: 'desc' };
       if (sort === 'price-asc') {
@@ -158,9 +170,10 @@ export const ProductController = {
         where: {
           status: 'active',
           OR: [
-            { name: { contains: q } },
-            { description: { contains: q } },
-            { brand: { contains: q } },
+            { name: { contains: q, mode: 'insensitive' } },
+            { description: { contains: q, mode: 'insensitive' } },
+            { brand: { contains: q, mode: 'insensitive' } },
+            { sku: { contains: q, mode: 'insensitive' } },
           ],
         },
         include: {

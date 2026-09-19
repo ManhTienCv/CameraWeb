@@ -4,6 +4,7 @@ import {
   FolderTree,
   Package,
   ShoppingCart,
+  Users,
   Settings,
   Star,
   LogOut,
@@ -12,7 +13,7 @@ import {
 } from 'lucide-react';
 import type { Page } from '../../types';
 
-export type AdminTab = 'dashboard' | 'products' | 'categories' | 'orders' | 'reviews' | 'settings';
+export type AdminTab = 'dashboard' | 'products' | 'categories' | 'orders' | 'users' | 'reviews' | 'settings';
 
 interface AdminSidebarProps {
   activeTab: AdminTab;
@@ -53,6 +54,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
 
   const navItemsSection2 = [
     { id: 'orders' as AdminTab, label: 'Đơn hàng', icon: ShoppingCart },
+    { id: 'users' as AdminTab, label: 'Người dùng', icon: Users },
     { id: 'reviews' as AdminTab, label: 'Đánh giá', icon: Star },
     { id: 'settings' as AdminTab, label: 'Cài đặt', icon: Settings },
   ];

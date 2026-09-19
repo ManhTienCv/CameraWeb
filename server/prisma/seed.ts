@@ -903,47 +903,425 @@ async function main() {
     console.log(` ✅ Đã tạo sản phẩm: ${createdProduct.name}`);
   }
 
-  // 4. Seed Demo Customer
-  const passwordHash = await bcrypt.hash('123456', 10);
-  const demoUser = await prisma.user.create({
-    data: {
+  // 4. Seed Users (1 Admin, 1 Staff, 15 Customers)
+  const defaultPasswordHash = await bcrypt.hash('123456', 10);
+  const adminPasswordHash = await bcrypt.hash('Admin@123456', 10);
+  const staffPasswordHash = await bcrypt.hash('Staff@123456', 10);
+
+  const usersData = [
+    {
+      email: 'admin@camerahub.vn',
+      fullName: 'Quản Trị Viên CameraHub',
+      phone: '0901234567',
+      passwordHash: adminPasswordHash,
+      role: 'admin',
+      status: 'active',
+      avatarUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150',
+      address: {
+        label: 'Trụ sở chính',
+        recipientName: 'Quản Trị Viên CameraHub',
+        phone: '0901234567',
+        address: 'Số 45 Phố Vọng, Phường Đồng Tâm, Quận Hai Bà Trưng',
+        city: 'Hà Nội',
+        isDefault: true,
+      },
+    },
+    {
+      email: 'staff@camerahub.vn',
+      fullName: 'Kỹ Thuật Viên CameraHub',
+      phone: '0902345678',
+      passwordHash: staffPasswordHash,
+      role: 'staff',
+      status: 'active',
+      avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+      address: {
+        label: 'Văn phòng CSKH',
+        recipientName: 'Kỹ Thuật Viên CameraHub',
+        phone: '0902345678',
+        address: 'Số 120 Đường Hoàng Hoa Thám, Phường 12, Quận Tân Bình',
+        city: 'TP. Hồ Chí Minh',
+        isDefault: true,
+      },
+    },
+    {
       email: 'customer@demopick.vn',
       fullName: 'Nguyễn Văn Phục',
       phone: '0909123456',
-      passwordHash,
+      passwordHash: defaultPasswordHash,
       role: 'customer',
-      addresses: {
-        create: [
-          {
-            label: 'Nhà riêng',
-            recipientName: 'Nguyễn Văn Phục',
-            phone: '0987654321',
-            address: 'Số 10 Đường Cầu Giấy, Phường Dịch Vọng',
-            city: 'Hà Nội',
-            isDefault: true,
-          },
-          {
-            label: 'Văn phòng Công ty',
-            recipientName: 'Nguyễn Văn Phục (Công ty)',
-            phone: '0987654321',
-            address: 'Tầng 18, Toà nhà Keangnam Landmark 72, Phạm Hùng',
-            city: 'Hà Nội',
-            isDefault: false,
-          },
-          {
-            label: 'Sân Pickleball',
-            recipientName: 'Nguyễn Văn Phục (Sân Q7)',
-            phone: '0987654321',
-            address: 'Cụm Sân DemoPick Pickleball, 123 Đường Tân Phong',
-            city: 'TP. Hồ Chí Minh',
-            isDefault: false,
-          },
-        ],
+      status: 'active',
+      avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+      address: {
+        label: 'Nhà riêng',
+        recipientName: 'Nguyễn Văn Phục',
+        phone: '0909123456',
+        address: 'Số 10 Đường Cầu Giấy, Phường Dịch Vọng, Quận Cầu Giấy',
+        city: 'Hà Nội',
+        isDefault: true,
       },
     },
-  });
+    {
+      email: 'hoang.nam@gmail.com',
+      fullName: 'Hoàng Nam',
+      phone: '0912345671',
+      passwordHash: defaultPasswordHash,
+      role: 'customer',
+      status: 'active',
+      avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
+      address: {
+        label: 'Nhà riêng',
+        recipientName: 'Hoàng Nam',
+        phone: '0912345671',
+        address: 'Số 88 Phố Huế, Phường Ngô Thì Nhậm, Quận Hai Bà Trưng',
+        city: 'Hà Nội',
+        isDefault: true,
+      },
+    },
+    {
+      email: 'lan.anh.photo@gmail.com',
+      fullName: 'Trần Thị Lan Anh',
+      phone: '0983456712',
+      passwordHash: defaultPasswordHash,
+      role: 'customer',
+      status: 'active',
+      avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
+      address: {
+        label: 'Studio cá nhân',
+        recipientName: 'Trần Thị Lan Anh',
+        phone: '0983456712',
+        address: 'Số 24 Nguyễn Huệ, Phường Bến Nghé, Quận 1',
+        city: 'TP. Hồ Chí Minh',
+        isDefault: true,
+      },
+    },
+    {
+      email: 'minh.duc.media@gmail.com',
+      fullName: 'Lê Minh Đức',
+      phone: '0934567823',
+      passwordHash: defaultPasswordHash,
+      role: 'customer',
+      status: 'active',
+      avatarUrl: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150',
+      address: {
+        label: 'Văn phòng Media',
+        recipientName: 'Lê Minh Đức',
+        phone: '0934567823',
+        address: 'Số 15 Lê Duẩn, Phường Hải Châu 1, Quận Hải Châu',
+        city: 'Đà Nẵng',
+        isDefault: true,
+      },
+    },
+    {
+      email: 'quynh.nga@gmail.com',
+      fullName: 'Phạm Quỳnh Nga',
+      phone: '0975678934',
+      passwordHash: defaultPasswordHash,
+      role: 'customer',
+      status: 'active',
+      avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150',
+      address: {
+        label: 'Nhà riêng',
+        recipientName: 'Phạm Quỳnh Nga',
+        phone: '0975678934',
+        address: 'Số 32 Kim Mã, Phường Kim Mã, Quận Ba Đình',
+        city: 'Hà Nội',
+        isDefault: true,
+      },
+    },
+    {
+      email: 'tuan.anh.vlog@gmail.com',
+      fullName: 'Vũ Tuấn Anh',
+      phone: '0946789045',
+      passwordHash: defaultPasswordHash,
+      role: 'customer',
+      status: 'active',
+      avatarUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150',
+      address: {
+        label: 'Căn hộ Sunrise City',
+        recipientName: 'Vũ Tuấn Anh',
+        phone: '0946789045',
+        address: 'Tòa Central 2, Đường Nguyễn Hữu Thọ, Phường Tân Hưng, Quận 7',
+        city: 'TP. Hồ Chí Minh',
+        isDefault: true,
+      },
+    },
+    {
+      email: 'thanh.tam@gmail.com',
+      fullName: 'Đỗ Thanh Tâm',
+      phone: '0927890156',
+      passwordHash: defaultPasswordHash,
+      role: 'customer',
+      status: 'active',
+      avatarUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150',
+      address: {
+        label: 'Nhà riêng',
+        recipientName: 'Đỗ Thanh Tâm',
+        phone: '0927890156',
+        address: 'Số 42 Đại Lộ Hòa Bình, Phường Tân An, Quận Ninh Kiều',
+        city: 'Cần Thơ',
+        isDefault: true,
+      },
+    },
+    {
+      email: 'hai.dang.travel@gmail.com',
+      fullName: 'Bùi Hải Đăng',
+      phone: '0968901267',
+      passwordHash: defaultPasswordHash,
+      role: 'customer',
+      status: 'active',
+      avatarUrl: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=150',
+      address: {
+        label: 'Nhà riêng',
+        recipientName: 'Bùi Hải Đăng',
+        phone: '0968901267',
+        address: 'Số 76 Lạch Tray, Phường Lạch Tray, Quận Ngô Quyền',
+        city: 'Hải Phòng',
+        isDefault: true,
+      },
+    },
+    {
+      email: 'ngoc.mai@gmail.com',
+      fullName: 'Ngô Ngọc Mai',
+      phone: '0919012378',
+      passwordHash: defaultPasswordHash,
+      role: 'customer',
+      status: 'active',
+      avatarUrl: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150',
+      address: {
+        label: 'Nhà riêng',
+        recipientName: 'Ngô Ngọc Mai',
+        phone: '0919012378',
+        address: 'Số 112 Tôn Đức Thắng, Phường Hàng Bột, Quận Đống Đa',
+        city: 'Hà Nội',
+        isDefault: true,
+      },
+    },
+    {
+      email: 'quoc.bao@gmail.com',
+      fullName: 'Trịnh Quốc Bảo',
+      phone: '0981123489',
+      passwordHash: defaultPasswordHash,
+      role: 'customer',
+      status: 'active',
+      avatarUrl: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150',
+      address: {
+        label: 'Nhà riêng',
+        recipientName: 'Trịnh Quốc Bảo',
+        phone: '0981123489',
+        address: 'Số 54 Hùng Vương, Phường Phú Hội',
+        city: 'Thừa Thiên Huế',
+        isDefault: true,
+      },
+    },
+    {
+      email: 'thu.trang.studio@gmail.com',
+      fullName: 'Nguyễn Thu Trang',
+      phone: '0932234590',
+      passwordHash: defaultPasswordHash,
+      role: 'customer',
+      status: 'active',
+      avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+      address: {
+        label: 'Studio',
+        recipientName: 'Nguyễn Thu Trang',
+        phone: '0932234590',
+        address: 'Số 205 Điện Biên Phủ, Phường 15, Quận Bình Thạnh',
+        city: 'TP. Hồ Chí Minh',
+        isDefault: true,
+      },
+    },
+    {
+      email: 'dinh.khoi@gmail.com',
+      fullName: 'Đặng Đình Khôi',
+      phone: '0973345601',
+      passwordHash: defaultPasswordHash,
+      role: 'customer',
+      status: 'active',
+      avatarUrl: 'https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?w=150',
+      address: {
+        label: 'Nhà riêng',
+        recipientName: 'Đặng Đình Khôi',
+        phone: '0973345601',
+        address: 'Số 89 Lê Thánh Tông, Phường Hồng Gai, TP. Hạ Long',
+        city: 'Quảng Ninh',
+        isDefault: true,
+      },
+    },
+    {
+      email: 'van.anh@gmail.com',
+      fullName: 'Dương Vân Anh',
+      phone: '0944456712',
+      passwordHash: defaultPasswordHash,
+      role: 'customer',
+      status: 'active',
+      avatarUrl: 'https://images.unsplash.com/photo-1548142813-c348350df52b?w=150',
+      address: {
+        label: 'Nhà riêng',
+        recipientName: 'Dương Vân Anh',
+        phone: '0944456712',
+        address: 'Số 62 Trần Phú, Phường Lộc Thọ, TP. Nha Trang',
+        city: 'Khánh Hòa',
+        isDefault: true,
+      },
+    },
+  ];
 
-  console.log(` 👤 Đã tạo tài khoản demo: ${demoUser.email} (Mật khẩu: 123456)`);
+  const seededUsers = [];
+  for (const u of usersData) {
+    const createdUser = await prisma.user.create({
+      data: {
+        email: u.email,
+        fullName: u.fullName,
+        phone: u.phone,
+        passwordHash: u.passwordHash,
+        role: u.role,
+        status: u.status,
+        avatarUrl: u.avatarUrl,
+        addresses: {
+          create: [u.address],
+        },
+      },
+      include: { addresses: true },
+    });
+    seededUsers.push(createdUser);
+  }
+
+  console.log(` 👤 Đã tạo ${seededUsers.length} tài khoản người dùng (Admin, Staff & Khách hàng).`);
+
+  // 5. Seed Orders (45 realistic orders distributed across the past 30 days and 12 months)
+  const allProducts = await prisma.product.findMany();
+  if (allProducts.length === 0) {
+    throw new Error('Chưa có sản phẩm nào trong database để tạo đơn hàng!');
+  }
+
+  const customerUsers = seededUsers.filter((u) => u.role === 'customer');
+  const now = new Date();
+
+  // Create 45 orders with varying dates and statuses
+  const orderConfigs = [
+    // --- GẦN ĐÂY: Trong 7 ngày qua (12 đơn hàng) ---
+    { daysAgo: 0, status: 'completed', payMethod: 'momo', payStatus: 'completed', prodIndices: [0, 4] },
+    { daysAgo: 0, status: 'shipping', payMethod: 'cod', payStatus: 'pending', prodIndices: [1] },
+    { daysAgo: 1, status: 'completed', payMethod: 'vietqr', payStatus: 'completed', prodIndices: [2, 5] },
+    { daysAgo: 1, status: 'pending', payMethod: 'vietqr', payStatus: 'pending', prodIndices: [3] },
+    { daysAgo: 2, status: 'completed', payMethod: 'momo', payStatus: 'completed', prodIndices: [6] },
+    { daysAgo: 2, status: 'shipping', payMethod: 'momo', payStatus: 'completed', prodIndices: [7, 8] },
+    { daysAgo: 3, status: 'completed', payMethod: 'cod', payStatus: 'completed', prodIndices: [0] },
+    { daysAgo: 3, status: 'cancelled', payMethod: 'cod', payStatus: 'failed', prodIndices: [9], cancelReason: 'Khách đổi ý muốn lấy dòng máy Sony A7 Mark IV' },
+    { daysAgo: 4, status: 'completed', payMethod: 'momo', payStatus: 'completed', prodIndices: [1, 10] },
+    { daysAgo: 4, status: 'shipping', payMethod: 'vietqr', payStatus: 'completed', prodIndices: [4] },
+    { daysAgo: 5, status: 'completed', payMethod: 'vietqr', payStatus: 'completed', prodIndices: [2] },
+    { daysAgo: 6, status: 'completed', payMethod: 'momo', payStatus: 'completed', prodIndices: [5, 11] },
+
+    // --- TRONG 8 - 30 NGÀY QUA (18 đơn hàng) ---
+    { daysAgo: 7, status: 'completed', payMethod: 'cod', payStatus: 'completed', prodIndices: [3] },
+    { daysAgo: 8, status: 'completed', payMethod: 'momo', payStatus: 'completed', prodIndices: [0, 6] },
+    { daysAgo: 9, status: 'completed', payMethod: 'vietqr', payStatus: 'completed', prodIndices: [1] },
+    { daysAgo: 10, status: 'shipping', payMethod: 'cod', payStatus: 'pending', prodIndices: [8] },
+    { daysAgo: 11, status: 'completed', payMethod: 'momo', payStatus: 'completed', prodIndices: [2, 7] },
+    { daysAgo: 12, status: 'cancelled', payMethod: 'vietqr', payStatus: 'failed', prodIndices: [4], cancelReason: 'Tìm được sản phẩm cũ giá rẻ hơn từ bạn bè' },
+    { daysAgo: 13, status: 'completed', payMethod: 'vietqr', payStatus: 'completed', prodIndices: [5] },
+    { daysAgo: 14, status: 'completed', payMethod: 'momo', payStatus: 'completed', prodIndices: [9, 10] },
+    { daysAgo: 15, status: 'completed', payMethod: 'cod', payStatus: 'completed', prodIndices: [0] },
+    { daysAgo: 17, status: 'completed', payMethod: 'vietqr', payStatus: 'completed', prodIndices: [3, 11] },
+    { daysAgo: 19, status: 'completed', payMethod: 'momo', payStatus: 'completed', prodIndices: [1] },
+    { daysAgo: 21, status: 'shipping', payMethod: 'vietqr', payStatus: 'completed', prodIndices: [6] },
+    { daysAgo: 22, status: 'completed', payMethod: 'cod', payStatus: 'completed', prodIndices: [2] },
+    { daysAgo: 24, status: 'completed', payMethod: 'momo', payStatus: 'completed', prodIndices: [7, 4] },
+    { daysAgo: 25, status: 'completed', payMethod: 'vietqr', payStatus: 'completed', prodIndices: [8] },
+    { daysAgo: 27, status: 'pending', payMethod: 'momo', payStatus: 'pending', prodIndices: [5] },
+    { daysAgo: 28, status: 'completed', payMethod: 'momo', payStatus: 'completed', prodIndices: [0] },
+    { daysAgo: 29, status: 'completed', payMethod: 'cod', payStatus: 'completed', prodIndices: [1, 9] },
+
+    // --- CÁC THÁNG TRƯỚC TRONG NĂM (15 đơn hàng: từ 35 ngày đến 330 ngày trước) ---
+    { daysAgo: 38, status: 'completed', payMethod: 'vietqr', payStatus: 'completed', prodIndices: [2] },
+    { daysAgo: 50, status: 'completed', payMethod: 'momo', payStatus: 'completed', prodIndices: [3, 6] },
+    { daysAgo: 65, status: 'completed', payMethod: 'cod', payStatus: 'completed', prodIndices: [0] },
+    { daysAgo: 80, status: 'completed', payMethod: 'vietqr', payStatus: 'completed', prodIndices: [1] },
+    { daysAgo: 95, status: 'cancelled', payMethod: 'momo', payStatus: 'failed', prodIndices: [7], cancelReason: 'Giao trễ kế hoạch du lịch nên khách hủy' },
+    { daysAgo: 110, status: 'completed', payMethod: 'momo', payStatus: 'completed', prodIndices: [4, 8] },
+    { daysAgo: 130, status: 'completed', payMethod: 'cod', payStatus: 'completed', prodIndices: [5] },
+    { daysAgo: 155, status: 'completed', payMethod: 'vietqr', payStatus: 'completed', prodIndices: [2, 9] },
+    { daysAgo: 180, status: 'completed', payMethod: 'momo', payStatus: 'completed', prodIndices: [0] },
+    { daysAgo: 210, status: 'completed', payMethod: 'vietqr', payStatus: 'completed', prodIndices: [1, 10] },
+    { daysAgo: 240, status: 'completed', payMethod: 'cod', payStatus: 'completed', prodIndices: [6] },
+    { daysAgo: 270, status: 'completed', payMethod: 'momo', payStatus: 'completed', prodIndices: [3] },
+    { daysAgo: 295, status: 'completed', payMethod: 'vietqr', payStatus: 'completed', prodIndices: [0, 5] },
+    { daysAgo: 320, status: 'completed', payMethod: 'momo', payStatus: 'completed', prodIndices: [2] },
+    { daysAgo: 345, status: 'completed', payMethod: 'cod', payStatus: 'completed', prodIndices: [4] },
+  ];
+
+  console.log(` 📦 Đang tạo ${orderConfigs.length} đơn hàng thực tế...`);
+
+  for (let i = 0; i < orderConfigs.length; i++) {
+    const cfg = orderConfigs[i];
+    const customer = customerUsers[i % customerUsers.length];
+    const defaultAddr = customer.addresses[0];
+
+    const orderDate = new Date(now.getTime() - cfg.daysAgo * 24 * 60 * 60 * 1000 - Math.floor(Math.random() * 8) * 3600 * 1000);
+    const orderCode = `CAM-${(260900 + i + 1).toString()}`;
+
+    // Select products
+    const selectedProds = cfg.prodIndices.map((idx) => allProducts[idx % allProducts.length]);
+    const shippingFee = 35000;
+    const discountAmount = i % 5 === 0 ? 100000 : 0;
+    const itemsTotal = selectedProds.reduce((sum, p) => sum + p.price, 0);
+    const totalAmount = Math.max(0, itemsTotal + shippingFee - discountAmount);
+
+    const order = await prisma.order.create({
+      data: {
+        orderCode,
+        userId: customer.id,
+        customerName: customer.fullName,
+        customerEmail: customer.email,
+        customerPhone: customer.phone || '0901234567',
+        shippingAddress: defaultAddr?.address || '123 Đường Cầu Giấy, Hà Nội',
+        city: defaultAddr?.city || 'Hà Nội',
+        paymentMethod: cfg.payMethod,
+        paymentStatus: cfg.payStatus,
+        orderStatus: cfg.status,
+        totalAmount,
+        shippingFee,
+        discountAmount,
+        shippingPartner: 'GHN Express',
+        ghnOrderCode: `GHN${orderCode.replace('-', '')}`,
+        trackingCode: `TRK${orderCode.replace('-', '')}`,
+        cancelReason: cfg.cancelReason || null,
+        createdAt: orderDate,
+        updatedAt: orderDate,
+        items: {
+          create: selectedProds.map((p) => ({
+            productId: p.id,
+            name: p.name,
+            price: p.price,
+            quantity: 1,
+            imageUrl: p.imageUrl,
+          })),
+        },
+      },
+    });
+
+    // If MoMo order and completed, seed transaction
+    if (cfg.payMethod === 'momo' && cfg.payStatus === 'completed') {
+      await prisma.paymentTransaction.create({
+        data: {
+          orderId: order.id,
+          gateway: 'momo',
+          gatewayOrderId: `MOMO_${order.orderCode}`,
+          transactionId: `TXN_${Date.now()}_${i}`,
+          amount: totalAmount,
+          status: 'paid',
+          resultCode: 0,
+          message: 'Giao dịch MoMo thành công.',
+          paidAt: orderDate,
+          createdAt: orderDate,
+          updatedAt: orderDate,
+        },
+      });
+    }
+  }
+
+  console.log(` ✅ Đã tạo thành công ${orderConfigs.length} đơn hàng chi tiết kèm lịch sử giao dịch.`);
 
   console.log('🎉 Hoàn thành gieo mầm dữ liệu (Seeding completed successfully)!');
 }

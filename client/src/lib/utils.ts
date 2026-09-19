@@ -11,3 +11,15 @@ export function formatCurrency(amount: number): string {
     currency: 'VND',
   }).format(amount);
 }
+
+export function formatDate(dateString: string | Date): string {
+  if (!dateString) return '';
+  const d = new Date(dateString);
+  if (isNaN(d.getTime())) return '';
+  return new Intl.DateTimeFormat('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(d);
+}
+

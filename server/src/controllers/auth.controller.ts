@@ -1,11 +1,23 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { OAuth2Client } from 'google-auth-library';
 import { prisma } from '../lib/prisma';
 import { AuthRequest } from '../middlewares/auth.middleware';
 import { emailService } from '../lib/email.service';
+import { formatOrder } from './order.controller';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'camerahub-super-secret-key-2026';
+
+let googleClientInstance: OAuth2Client | null = null;
+function getGoogleClient(clientId: string): OAuth2Client {
+  if (!googleClientInstance) {
+    googleClientInstance = new OAuth2Client(clientId);
+  }
+  return googleClientInstance;
+}
+
+
 
 interface OtpEntry {
   otp: string;
@@ -214,9 +226,21 @@ export const authController = {
         return;
       }
 
+      if (!user.passwordHash) {
+        res.status(400).json({
+          message: 'Tài khoản này được đăng ký bằng Google. Vui lòng bấm vào "Đăng nhập bằng Google".',
+        });
+        return;
+      }
+
       const isValid = await bcrypt.compare(password, user.passwordHash);
       if (!isValid) {
         res.status(401).json({ message: 'Email hoặc mật khẩu không chính xác.' });
+        return;
+      }
+
+      if (user.status === 'blocked') {
+        res.status(403).json({ message: 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên để được hỗ trợ.' });
         return;
       }
 
@@ -243,6 +267,133 @@ export const authController = {
       res.status(500).json({ message: 'Lỗi server khi đăng nhập.' });
     }
   },
+
+  // 2.1 GOOGLE SIGN-IN / OAUTH
+  googleLogin: async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { credential } = req.body;
+
+      if (!credential || typeof credential !== 'string' || credential.trim().length === 0) {
+        res.status(400).json({ message: 'Thiếu Google credential token hoặc định dạng không hợp lệ.' });
+        return;
+      }
+
+      if (credential.length > 4096) {
+        res.status(400).json({ message: 'Google credential token vượt quá độ dài cho phép.' });
+        return;
+      }
+
+      const clientId = process.env.GOOGLE_CLIENT_ID;
+      if (!clientId) {
+        res.status(500).json({ message: 'Chưa cấu hình GOOGLE_CLIENT_ID trên hệ thống.' });
+        return;
+      }
+
+      const googleClient = getGoogleClient(clientId);
+
+      // Xác thực chữ ký token từ Google Public Keys
+      let payload;
+      try {
+        const ticket = await googleClient.verifyIdToken({
+          idToken: credential.trim(),
+          audience: clientId,
+        });
+        payload = ticket.getPayload();
+      } catch (verifyError: any) {
+
+        console.error('Google token verification failed:', verifyError?.message || verifyError);
+        res.status(401).json({ message: 'Mã xác thực Google không hợp lệ hoặc đã hết hạn.' });
+        return;
+      }
+
+      if (!payload || !payload.email) {
+        res.status(400).json({ message: 'Không thể trích xuất thông tin tài khoản Google.' });
+        return;
+      }
+
+      if (!payload.email_verified) {
+        res.status(400).json({ message: 'Tài khoản Google chưa được xác minh địa chỉ email.' });
+        return;
+      }
+
+      const googleId = payload.sub;
+      const email = payload.email.toLowerCase().trim();
+      const fullName = (payload.name || payload.given_name || email.split('@')[0]).trim();
+      const avatarUrl = payload.picture || null;
+
+      // 1. Tìm user theo googleId
+      let user = await prisma.user.findUnique({
+        where: { googleId },
+      });
+
+      if (user) {
+        // Đã có tài khoản & đã liên kết googleId -> cập nhật avatar nếu chưa có
+        if (!user.avatarUrl && avatarUrl) {
+          user = await prisma.user.update({
+            where: { id: user.id },
+            data: { avatarUrl },
+          });
+        }
+      } else {
+        // 2. Kiểm tra xem email này đã tồn tại tài khoản thường (email/password) chưa
+        const existingByEmail = await prisma.user.findUnique({
+          where: { email },
+        });
+
+        if (existingByEmail) {
+          // Tự động liên kết Google ID với tài khoản email sẵn có (Account Linking)
+          user = await prisma.user.update({
+            where: { id: existingByEmail.id },
+            data: {
+              googleId,
+              avatarUrl: existingByEmail.avatarUrl || avatarUrl,
+            },
+          });
+        } else {
+          // 3. Người dùng mới -> Tạo tài khoản với passwordHash = null
+          user = await prisma.user.create({
+            data: {
+              email,
+              passwordHash: null,
+              googleId,
+              fullName,
+              avatarUrl,
+              role: 'customer',
+            },
+          });
+        }
+      }
+
+      if (user.status === 'blocked') {
+        res.status(403).json({ message: 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên để được hỗ trợ.' });
+        return;
+      }
+
+      // Tạo JWT Session Token của hệ thống
+      const token = jwt.sign(
+        { userId: user.id, email: user.email, role: user.role },
+        JWT_SECRET,
+        { expiresIn: '7d' }
+      );
+
+      res.json({
+        message: 'Đăng nhập bằng Google thành công!',
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          fullName: user.fullName,
+          phone: user.phone,
+          avatarUrl: user.avatarUrl,
+          role: user.role,
+        },
+      });
+    } catch (error) {
+      console.error('Google login error:', error);
+      res.status(500).json({ message: 'Lỗi server khi xử lý đăng nhập Google.' });
+    }
+  },
+
 
   // 3. GET PROFILE
   getProfile: async (req: AuthRequest, res: Response): Promise<void> => {
@@ -302,14 +453,16 @@ export const authController = {
 
       let passwordHash = user.passwordHash;
       if (newPassword) {
-        if (!currentPassword) {
-          res.status(400).json({ message: 'Vui lòng nhập mật khẩu hiện tại để đổi mật khẩu mới.' });
-          return;
-        }
-        const isValid = await bcrypt.compare(currentPassword, user.passwordHash);
-        if (!isValid) {
-          res.status(400).json({ message: 'Mật khẩu hiện tại không đúng.' });
-          return;
+        if (user.passwordHash) {
+          if (!currentPassword) {
+            res.status(400).json({ message: 'Vui lòng nhập mật khẩu hiện tại để đổi mật khẩu mới.' });
+            return;
+          }
+          const isValid = await bcrypt.compare(currentPassword, user.passwordHash);
+          if (!isValid) {
+            res.status(400).json({ message: 'Mật khẩu hiện tại không đúng.' });
+            return;
+          }
         }
         passwordHash = await bcrypt.hash(newPassword, 10);
       }
@@ -615,7 +768,7 @@ export const authController = {
         orderBy: { createdAt: 'desc' },
       });
 
-      res.json(orders);
+      res.json(orders.map((order) => formatOrder(order, true)));
     } catch (error) {
       console.error('Get my orders error:', error);
       res.status(500).json({ message: 'Lỗi khi lấy danh sách đơn hàng.' });

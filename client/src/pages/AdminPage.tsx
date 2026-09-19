@@ -11,6 +11,7 @@ import { AdminCategoriesTab } from '../components/admin/AdminCategoriesTab';
 import { AdminOrdersTab } from '../components/admin/AdminOrdersTab';
 import { AdminReviewsTab } from '../components/admin/AdminReviewsTab';
 import { AdminSettingsTab } from '../components/admin/AdminSettingsTab';
+import { AdminUsersTab } from '../components/admin/AdminUsersTab';
 import {
   ProductFormModal,
   DeleteConfirmModal,
@@ -25,8 +26,26 @@ interface AdminPageProps {
 }
 
 export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, initialTab = 'dashboard' }) => {
-  const [activeTab, setActiveTab] = useState<AdminTab>(initialTab);
+  const [activeTab, setActiveTab] = useState<AdminTab>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get('tab') as AdminTab;
+      if (['dashboard', 'products', 'categories', 'orders', 'users', 'reviews', 'settings'].includes(tabParam)) {
+        return tabParam;
+      }
+    }
+    return initialTab;
+  });
   const toast = useToast();
+
+  const handleTabChange = (tab: AdminTab) => {
+    setActiveTab(tab);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', tab);
+      window.history.replaceState({}, '', url.toString());
+    }
+  };
 
   // Data states
   const [products, setProducts] = useState<Product[]>([]);
@@ -252,10 +271,25 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, initialTab = '
     }
   };
 
+  const handleDispatchGhn = async (orderId: string) => {
+    try {
+      const res = await api.createGhnShippingOrder(orderId);
+      if (res.success) {
+        toast.success(`Đã đẩy đơn sang GHN Express thành công! Mã vận đơn: ${res.tracking_code}`);
+        loadData();
+      } else {
+        toast.error(res.message || 'Không thể tạo đơn GHN!');
+      }
+    } catch (err: any) {
+      console.error('GHN dispatch error:', err);
+      toast.error(err.message || 'Lỗi khi kết nối GHN Express!');
+    }
+  };
+
   return (
     <div className="h-screen bg-cream-50 flex text-ink-800 font-sans overflow-hidden">
       {/* Sidebar - Fixed Position */}
-      <AdminSidebar activeTab={activeTab} setActiveTab={setActiveTab} onNavigate={onNavigate} />
+      <AdminSidebar activeTab={activeTab} setActiveTab={handleTabChange} onNavigate={onNavigate} />
 
       {/* Main Right Area - Independent Scrollable Pane */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto">
@@ -267,7 +301,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, initialTab = '
             <AdminDashboardTab
               products={products}
               orders={orders}
-              setActiveTab={setActiveTab}
+              setActiveTab={handleTabChange}
               onOpenAddProduct={handleOpenAddProduct}
               onOpenAddCategory={handleOpenAddCategory}
               onNavigate={onNavigate}
@@ -301,8 +335,12 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, initialTab = '
               orders={orders}
               onUpdateStatus={handleUpdateOrderStatus}
               onViewOrder={setViewingOrder}
+              onDispatchGhn={handleDispatchGhn}
+              onRefresh={loadData}
             />
           )}
+
+          {activeTab === 'users' && <AdminUsersTab />}
 
           {activeTab === 'reviews' && <AdminReviewsTab />}
 
@@ -360,7 +398,14 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onNavigate, initialTab = '
         />
       )}
 
-      <OrderViewModal order={viewingOrder} onClose={() => setViewingOrder(null)} />
+      <OrderViewModal
+        order={viewingOrder}
+        onClose={() => setViewingOrder(null)}
+        onOrderUpdated={(updated) => {
+          setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
+          setViewingOrder(updated);
+        }}
+      />
     </div>
   );
 };

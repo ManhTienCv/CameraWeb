@@ -1,4 +1,20 @@
-import type { Category, Product, Cart, Order, User, Address, AuthResponse } from '../types';
+import type {
+  Category,
+  Product,
+  Cart,
+  Order,
+  User,
+  Address,
+  AuthResponse,
+  AdminUserListItem,
+  AnalyticsOverview,
+  DailyRevenueItem,
+  MonthlyRevenueItem,
+  CategoryRevenueItem,
+  PaymentMethodStatItem,
+  OrderStatusStatItem,
+  TopProductItem,
+} from '../types';
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || '') + '/api/v1';
 
@@ -72,6 +88,13 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+
+  googleLogin: (credential: string) =>
+    request<AuthResponse>('/auth/google', {
+      method: 'POST',
+      body: JSON.stringify({ credential }),
+    }),
+
 
   register: (data: { email: string; password: string; fullName: string; phone?: string }) =>
     request<AuthResponse>('/auth/register', {
@@ -176,8 +199,8 @@ export const api = {
   getFeaturedProducts: (type: 'featured' | 'new' = 'featured') =>
     request<Product[]>(`/products/featured?type=${type}`),
 
-  searchProducts: (q: string) =>
-    request<Product[]>(`/products/search?q=${encodeURIComponent(q)}`),
+  searchProducts: (q: string, init?: RequestInit) =>
+    request<Product[]>(`/products/search?q=${encodeURIComponent(q)}`, init),
 
   getProductBySlug: (slug: string) =>
     request<Product>(`/products/${slug}`),
@@ -215,6 +238,9 @@ export const api = {
     shipping_address: string;
     city: string;
     payment_method?: string;
+    shipping_partner?: string;
+    shipping_fee?: number;
+    discount_amount?: number;
     items: Array<{ product_id: string; name: string; price: number; quantity: number; image_url: string }>;
   }) =>
     request<Order>('/orders', {
@@ -271,5 +297,153 @@ export const api = {
     request<{ message: string; order: Order }>(`/admin/orders/${id}`, {
       method: 'PUT',
       body: JSON.stringify({ status }),
+    }),
+
+  confirmOrderRefund: (
+    id: string,
+    data?: { refundTransactionCode?: string; refundNote?: string }
+  ) =>
+    request<{ message: string; order: Order }>(`/admin/orders/${id}/confirm-refund`, {
+      method: 'POST',
+      body: JSON.stringify(data || {}),
+    }),
+
+  // Analytics & Reports APIs
+  getAnalyticsOverview: () =>
+    request<AnalyticsOverview>('/admin/analytics/overview'),
+
+  getRevenueTrend: () =>
+    request<{ data: DailyRevenueItem[] }>('/admin/analytics/revenue-trend'),
+
+  getMonthlyRevenue: () =>
+    request<{ data: MonthlyRevenueItem[] }>('/admin/analytics/monthly'),
+
+  getCategoryDistribution: () =>
+    request<{ data: CategoryRevenueItem[]; grandTotal: number }>('/admin/analytics/categories'),
+
+  getPaymentMethodStats: () =>
+    request<{ data: PaymentMethodStatItem[]; totalOrders: number; totalAmount: number }>('/admin/analytics/payment-methods'),
+
+  getOrderStatusStats: () =>
+    request<{ data: OrderStatusStatItem[]; total: number }>('/admin/analytics/order-statuses'),
+
+  getTopSellingProducts: () =>
+    request<{ data: TopProductItem[] }>('/admin/analytics/top-products'),
+
+  // Admin User Management APIs
+  getAdminUsers: (params?: { page?: number; limit?: number; search?: string; role?: string; status?: string }) => {
+    const query = new URLSearchParams();
+    if (params?.page) query.set('page', String(params.page));
+    if (params?.limit) query.set('limit', String(params.limit));
+    if (params?.search) query.set('search', params.search);
+    if (params?.role && params.role !== 'all') query.set('role', params.role);
+    if (params?.status && params.status !== 'all') query.set('status', params.status);
+    const qs = query.toString();
+    return request<{
+      data: AdminUserListItem[];
+      pagination: { page: number; limit: number; totalUsers: number; totalPages: number };
+    }>(`/admin/users${qs ? `?${qs}` : ''}`);
+  },
+
+  getAdminUserDetail: (id: string) =>
+    request<{ user: User & { addresses: Address[]; orders: Order[]; totalSpent: number } }>(`/admin/users/${id}`),
+
+  updateAdminUserRole: (id: string, role: string) =>
+    request<{ message: string; user: any }>(`/admin/users/${id}/role`, {
+      method: 'PUT',
+      body: JSON.stringify({ role }),
+    }),
+
+  toggleAdminUserStatus: (id: string, status: string) =>
+    request<{ message: string; user: any }>(`/admin/users/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    }),
+
+  getOrders: (params?: { status?: string }) =>
+    request<Order[]>('/orders' + (params?.status ? `?status=${params.status}` : '')),
+
+  cancelOrder: (
+    id: string,
+    data?:
+      | string
+      | {
+          reason?: string;
+          refundBankName?: string;
+          refundAccountNumber?: string;
+          refundAccountHolder?: string;
+        }
+  ) => {
+    const payload = typeof data === 'string' ? { reason: data } : data || {};
+    return request<{ message: string; order: Order }>(`/orders/${id}/cancel`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  // MoMo Payment Gateway
+  createMomoPayment: (orderId: string, redirectUrl?: string) =>
+    request<{
+      success: boolean;
+      payUrl?: string;
+      qrCodeUrl?: string;
+      deeplink?: string;
+      orderCode?: string;
+      amount?: number;
+      message?: string;
+    }>('/payment/momo/create', {
+      method: 'POST',
+      body: JSON.stringify({ orderId, redirectUrl }),
+    }),
+
+  payAgainMomo: (orderId: string, redirectUrl?: string) =>
+    request<{
+      success: boolean;
+      payUrl?: string;
+      qrCodeUrl?: string;
+      deeplink?: string;
+      orderCode?: string;
+      message?: string;
+    }>('/payment/momo/pay-again', {
+      method: 'POST',
+      body: JSON.stringify({ orderId, redirectUrl }),
+    }),
+
+  // GHN Express Shipping APIs
+  getGhnProvinces: () =>
+    request<{ success: boolean; data: Array<{ ProvinceID: number; ProvinceName: string; Code: string }> }>(
+      '/shipping/ghn/provinces'
+    ),
+
+  getGhnDistricts: (provinceId: number) =>
+    request<{ success: boolean; data: Array<{ DistrictID: number; ProvinceID: number; DistrictName: string; Code: string }> }>(
+      `/shipping/ghn/districts/${provinceId}`
+    ),
+
+  getGhnWards: (districtId: number) =>
+    request<{ success: boolean; data: Array<{ WardCode: string; DistrictID: number; WardName: string }> }>(
+      `/shipping/ghn/wards/${districtId}`
+    ),
+
+  calculateGhnFee: (params: { toDistrictId: number; toWardCode: string; weightGram?: number; insuranceValue?: number }) =>
+    request<{
+      success: boolean;
+      data: { total: number; service_fee: number; insurance_fee: number; is_live: boolean };
+    }>('/shipping/ghn/fee', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    }),
+
+  createGhnShippingOrder: (orderId: string, data?: { toDistrictId?: number; toWardCode?: string }) =>
+    request<{
+      success: boolean;
+      tracking_code: string;
+      expected_delivery_time?: string;
+      total_fee?: number;
+      order?: Order;
+      message?: string;
+    }>(`/shipping/ghn/create-order/${orderId}`, {
+      method: 'POST',
+      body: JSON.stringify(data || {}),
     }),
 };

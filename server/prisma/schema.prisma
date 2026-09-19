@@ -10,13 +10,17 @@ generator client {
 model User {
   id           String    @id @default(uuid())
   email        String    @unique
-  passwordHash String    @map("password_hash")
+  passwordHash String?   @map("password_hash")
+  googleId     String?   @unique @map("google_id")
   fullName     String    @map("full_name")
   phone        String?
   avatarUrl    String?   @map("avatar_url")
   role         String    @default("customer")
+  status       String    @default("active")
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
+
+
 
   addresses    Address[]
   orders       Order[]
@@ -154,27 +158,39 @@ model CartItem {
 }
 
 model Order {
-  id              String      @id @default(uuid())
-  orderCode       String      @unique @map("order_code")
-  userId          String?     @map("user_id")
-  sessionId       String?     @map("session_id")
-  customerName    String      @map("customer_name")
-  customerEmail   String      @map("customer_email")
-  customerPhone   String      @map("customer_phone")
-  shippingAddress String      @map("shipping_address")
-  city            String
-  paymentMethod   String      @default("cod") @map("payment_method")
-  paymentStatus   String      @default("pending") @map("payment_status")
-  totalAmount     Float       @map("total_amount")
-  shippingFee     Float       @default(0) @map("shipping_fee")
-  discountAmount  Float       @default(0) @map("discount_amount")
-  orderStatus     String      @default("pending") @map("order_status")
-  notes           String?
-  createdAt       DateTime    @default(now()) @map("created_at")
-  updatedAt       DateTime    @updatedAt @map("updated_at")
+  id                   String               @id @default(uuid())
+  orderCode            String               @unique @map("order_code")
+  userId               String?              @map("user_id")
+  sessionId            String?              @map("session_id")
+  customerName         String               @map("customer_name")
+  customerEmail        String               @map("customer_email")
+  customerPhone        String               @map("customer_phone")
+  shippingAddress      String               @map("shipping_address")
+  city                 String
+  paymentMethod        String               @default("cod") @map("payment_method")
+  paymentStatus        String               @default("pending") @map("payment_status")
+  totalAmount          Float                @map("total_amount")
+  shippingFee          Float                @default(0) @map("shipping_fee")
+  discountAmount       Float                @default(0) @map("discount_amount")
+  orderStatus          String               @default("pending") @map("order_status")
+  shippingPartner      String               @default("GHN Express") @map("shipping_partner")
+  trackingCode         String?              @map("tracking_code")
+  ghnOrderCode         String?              @map("ghn_order_code")
+  expectedDeliveryTime String?              @map("expected_delivery_time")
+  cancelReason         String?              @map("cancel_reason")
+  refundBankName       String?              @map("refund_bank_name")
+  refundAccountNumber  String?              @map("refund_account_number")
+  refundAccountHolder  String?              @map("refund_account_holder")
+  refundTransactionCode String?             @map("refund_transaction_code")
+  refundNote           String?              @map("refund_note")
+  refundedAt           DateTime?            @map("refunded_at")
+  notes                String?
+  createdAt            DateTime             @default(now()) @map("created_at")
+  updatedAt            DateTime             @updatedAt @map("updated_at")
 
-  user            User?       @relation(fields: [userId], references: [id])
-  items           OrderItem[]
+  user                 User?                @relation(fields: [userId], references: [id])
+  items                OrderItem[]
+  paymentTransactions  PaymentTransaction[]
 
   @@map("orders")
 }
@@ -193,3 +209,25 @@ model OrderItem {
 
   @@map("order_items")
 }
+
+model PaymentTransaction {
+  id              String    @id @default(uuid())
+  orderId         String    @map("order_id")
+  gateway         String    @default("momo")
+  gatewayOrderId  String?   @map("gateway_order_id")
+  transactionId   String?   @map("transaction_id")
+  amount          Float
+  status          String    @default("pending") // pending, initiated, paid, failed
+  resultCode      Int?      @map("result_code")
+  message         String?
+  requestPayload  String?   @map("request_payload")
+  responsePayload String?   @map("response_payload")
+  paidAt          DateTime? @map("paid_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  order           Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("payment_transactions")
+}
+

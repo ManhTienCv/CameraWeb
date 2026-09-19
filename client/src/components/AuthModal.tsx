@@ -19,6 +19,8 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { api } from '../lib/api';
+import { GoogleLoginButton } from './GoogleLoginButton';
+
 
 export const AuthModal: React.FC = () => {
   const { isAuthModalOpen, authModalTab, closeAuthModal, openAuthModal, login, registerWithOtp } =
@@ -385,6 +387,9 @@ export const AuthModal: React.FC = () => {
                   </span>
                 </div>
 
+                {/* Google Sign-In */}
+                <GoogleLoginButton mode="login" />
+
                 {/* Quick Demo Fill Button */}
                 <button
                   type="button"
@@ -394,6 +399,7 @@ export const AuthModal: React.FC = () => {
                   <Zap size={15} className="text-amber-500 fill-amber-500" />
                   <span>Điền nhanh tài khoản Demo</span>
                 </button>
+
               </form>
 
               {/* Bottom Switch Link */}
@@ -517,7 +523,21 @@ export const AuthModal: React.FC = () => {
                         </>
                       )}
                     </button>
+
+                    {/* Divider */}
+                    <div className="relative py-1 flex items-center justify-center">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-cream-200" />
+                      </div>
+                      <span className="relative px-3 bg-white text-[11px] font-bold text-ink-400 uppercase tracking-wider">
+                        HOẶC
+                      </span>
+                    </div>
+
+                    {/* Google Register */}
+                    <GoogleLoginButton mode="register" />
                   </form>
+
 
                   {/* Bottom Switch Link */}
                   <div className="text-center text-xs text-ink-500 pt-1">

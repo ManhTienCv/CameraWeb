@@ -173,6 +173,17 @@ export const CartController = {
         return res.status(422).json({ message: 'Số lượng phải lớn hơn hoặc bằng 1' });
       }
 
+      const existingItem = await prisma.cartItem.findFirst({
+        where: {
+          id,
+          cart: { sessionId },
+        },
+      });
+
+      if (!existingItem) {
+        return res.status(404).json({ message: 'Không tìm thấy sản phẩm trong giỏ hàng' });
+      }
+
       await prisma.cartItem.update({
         where: { id },
         data: { quantity: qty },
@@ -207,7 +218,17 @@ export const CartController = {
       const sessionId = getSessionId(req);
       const { id } = req.params;
 
-      await prisma.cartItem.delete({ where: { id } }).catch(() => null);
+      const existingItem = await prisma.cartItem.findFirst({
+        where: {
+          id,
+          cart: { sessionId },
+        },
+      });
+
+      if (existingItem) {
+        await prisma.cartItem.delete({ where: { id } });
+      }
+
 
       const cart = await getOrCreateCart(sessionId);
       const fullCart = await prisma.cart.findUnique({

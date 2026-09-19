@@ -10,7 +10,9 @@ interface AuthContextType {
   openAuthModal: (tab?: 'login' | 'register') => void;
   closeAuthModal: () => void;
   login: (email: string, pass: string) => Promise<void>;
+  loginWithGoogle: (credential: string) => Promise<void>;
   register: (email: string, pass: string, fullName: string, phone?: string) => Promise<void>;
+
   registerWithOtp: (email: string, pass: string, fullName: string, phone: string | undefined, otp: string) => Promise<void>;
   setAuthenticatedUser: (token: string, user: User) => void;
   logout: () => void;
@@ -20,7 +22,18 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const token = localStorage.getItem('camera_auth_token');
+      const savedUser = localStorage.getItem('camera_auth_user');
+      if (token && savedUser) {
+        return JSON.parse(savedUser);
+      }
+    } catch (e) {
+      console.warn('Error parsing cached user:', e);
+    }
+    return null;
+  });
   const [loading, setLoading] = useState(true);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalTab, setAuthModalTab] = useState<'login' | 'register'>('login');
@@ -29,6 +42,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const token = localStorage.getItem('camera_auth_token');
     if (!token) {
       setUser(null);
+      localStorage.removeItem('camera_auth_user');
       setLoading(false);
       return;
     }
@@ -36,9 +50,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const data = await api.getProfile();
       setUser(data);
+      localStorage.setItem('camera_auth_user', JSON.stringify(data));
     } catch (err) {
       console.warn('Auth token expired or invalid:', err);
       localStorage.removeItem('camera_auth_token');
+      localStorage.removeItem('camera_auth_user');
       setUser(null);
     } finally {
       setLoading(false);
@@ -60,6 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const setAuthenticatedUser = (token: string, userData: User) => {
     localStorage.setItem('camera_auth_token', token);
+    localStorage.setItem('camera_auth_user', JSON.stringify(userData));
     setUser(userData);
     closeAuthModal();
   };
@@ -69,7 +86,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAuthenticatedUser(res.token, res.user);
   };
 
+  const loginWithGoogle = async (credential: string) => {
+    const res = await api.googleLogin(credential);
+    setAuthenticatedUser(res.token, res.user);
+  };
+
   const register = async (email: string, pass: string, fullName: string, phone?: string) => {
+
     const res = await api.register({ email, password: pass, fullName, phone });
     setAuthenticatedUser(res.token, res.user);
   };
@@ -93,6 +116,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     localStorage.removeItem('camera_auth_token');
+    localStorage.removeItem('camera_auth_user');
     setUser(null);
   };
 
@@ -106,7 +130,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         openAuthModal,
         closeAuthModal,
         login,
+        loginWithGoogle,
         register,
+
         registerWithOtp,
         setAuthenticatedUser,
         logout,

@@ -18,6 +18,8 @@ import {
   AlertTriangle,
   Flame,
   ArrowLeft,
+  CreditCard,
+  Smartphone,
 } from 'lucide-react';
 import type { Page, Address } from '../types';
 import { useCart } from '../context/CartContext';
@@ -182,10 +184,32 @@ export function CheckoutPage({ onNavigate }: Props) {
         shipping_address: form.address,
         city: form.city,
         payment_method: form.payment,
+        shipping_partner: shippingCalculation.carrier.name || 'GHN Express',
+        shipping_fee: shippingFee,
+        discount_amount: 0,
         items: orderItems,
       });
 
       await clearCart();
+
+      // Nếu khách hàng chọn MoMo -> Khởi tạo cổng thanh toán MoMo Sandbox
+      if (form.payment === 'momo') {
+        try {
+          const redirectUrl = `${window.location.origin}/order-success?orderId=${order.id}`;
+          const momoRes = await api.createMomoPayment(order.id, redirectUrl);
+          if (momoRes.success && momoRes.payUrl) {
+            toast.info('Đang chuyển hướng đến cổng thanh toán MoMo Sandbox...');
+            setTimeout(() => {
+              window.location.href = momoRes.payUrl!;
+            }, 800);
+            return;
+          }
+        } catch (momoErr: any) {
+          console.warn('Lỗi kết nối MoMo Gateway:', momoErr);
+          toast.warning('Cổng MoMo đang bận, chuyển hướng đến trang xác nhận đơn hàng.');
+        }
+      }
+
       onNavigate({ name: 'order-success', orderId: order.id });
     } catch (err) {
       console.error('Failed to create order:', err);
@@ -514,23 +538,19 @@ export function CheckoutPage({ onNavigate }: Props) {
                 {
                   id: 'vietqr',
                   label: 'Chuyển khoản VietQR (Napas 24/7 - Khuyên dùng)',
-                  desc: 'Quét mã QR bằng App mọi ngân hàng (VCB, MB, Techcombank, MoMo...). Tự động duyệt đơn.',
-                  badge: 'Khuyên dùng • Xử lý tức thì',
+                  desc: 'Quét mã QR bằng App mọi ngân hàng (VCB, MB, Techcombank, MoMo...). Tự động duyệt đơn tức thì.',
+                  badge: 'Khuyên dùng • Tức thì',
+                },
+                {
+                  id: 'momo',
+                  label: 'Cổng thanh toán MoMo V2 (All-in-One)',
+                  desc: 'Thanh toán trực tiếp qua App MoMo, Thẻ ATM Nội địa (Napas), Thẻ Quốc tế (Visa/Mastercard)',
+                  badge: 'Sandbox Test',
                 },
                 {
                   id: 'cod',
                   label: 'Thanh toán khi nhận hàng (COD)',
                   desc: 'Kiểm tra máy ảnh và thanh toán tiền mặt khi shipper giao tận nơi',
-                },
-                {
-                  id: 'vnpay',
-                  label: 'Cổng VNPAY (ATM / Visa / QR Code)',
-                  desc: 'Thanh toán bảo mật trực tuyến qua VNPAY an toàn 100%',
-                },
-                {
-                  id: 'momo',
-                  label: 'Ví điện tử MoMo',
-                  desc: 'Quét mã QR qua ứng dụng MoMo tiện lợi',
                 },
               ].map((method) => {
                 const isSelected = form.payment === method.id;
@@ -539,7 +559,9 @@ export function CheckoutPage({ onNavigate }: Props) {
                     key={method.id}
                     className={`rounded-2xl border-2 transition-all overflow-hidden ${
                       isSelected
-                        ? 'border-accent-500 bg-accent-50/40 shadow-xs'
+                        ? method.id === 'momo'
+                          ? 'border-[#D82D8B] bg-pink-50/20 shadow-xs'
+                          : 'border-accent-500 bg-accent-50/40 shadow-xs'
                         : 'border-cream-200 hover:border-cream-300 bg-white'
                     }`}
                   >
@@ -550,13 +572,23 @@ export function CheckoutPage({ onNavigate }: Props) {
                         value={method.id}
                         checked={isSelected}
                         onChange={(e) => setForm({ ...form, payment: e.target.value })}
-                        className="w-4 h-4 text-accent-500 focus:ring-accent-400 mt-1 cursor-pointer"
+                        className={`w-4 h-4 mt-1 cursor-pointer ${
+                          method.id === 'momo'
+                            ? 'text-[#D82D8B] focus:ring-[#D82D8B]'
+                            : 'text-accent-500 focus:ring-accent-400'
+                        }`}
                       />
                       <div className="flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-bold text-sm text-ink-900">{method.label}</p>
                           {method.badge && (
-                            <span className="px-2 py-0.5 bg-accent-50 text-accent-700 text-[10px] font-bold rounded-full border border-accent-200">
+                            <span
+                              className={`px-2 py-0.5 text-[10px] font-bold rounded-full border ${
+                                method.id === 'momo'
+                                  ? 'bg-pink-100 text-[#a51866] border-pink-200'
+                                  : 'bg-accent-50 text-accent-700 border-accent-200'
+                              }`}
+                            >
                               {method.badge}
                             </span>
                           )}
@@ -564,6 +596,104 @@ export function CheckoutPage({ onNavigate }: Props) {
                         <p className="text-xs text-ink-500 mt-0.5">{method.desc}</p>
                       </div>
                     </label>
+
+                    {/* MoMo Sandbox Demo Test Card Information Box */}
+                    {method.id === 'momo' && isSelected && (
+                      <div className="mx-4 mb-4 p-4 rounded-xl bg-white border border-[#D82D8B]/30 shadow-xs space-y-3 animate-fade-in">
+                        <div className="flex items-center justify-between pb-2 border-b border-pink-100">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-lg bg-[#D82D8B] text-white flex items-center justify-center font-bold text-xs">
+                              M
+                            </div>
+                            <span className="text-xs font-bold text-ink-900">
+                              Thông tin Thẻ Test MoMo Sandbox (Dùng để thanh toán thử)
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-50 text-[#D82D8B] border border-pink-200">
+                            Môi trường Test
+                          </span>
+                        </div>
+
+                        <div className="grid sm:grid-cols-2 gap-3 text-xs">
+                          {/* Option 1: ATM NCB */}
+                          <div className="p-3 bg-pink-50/50 rounded-lg border border-pink-100 space-y-1.5">
+                            <div className="flex items-center gap-1.5 font-bold text-ink-900 text-[11px] text-[#a51866]">
+                              <CreditCard size={13} />
+                              <span>Thẻ ATM Nội Địa NCB Test:</span>
+                            </div>
+                            <div className="space-y-1 text-ink-700 text-[11px]">
+                              <div className="flex justify-between items-center">
+                                <span className="text-ink-500">Ngân hàng:</span>
+                                <span className="font-semibold font-mono">NCB</span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-ink-500">Số thẻ:</span>
+                                <div className="flex items-center gap-1">
+                                  <span className="font-mono font-bold text-ink-900">9704198526191432198</span>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      handleCopy('momo_card', '9704198526191432198');
+                                    }}
+                                    className="p-1 hover:bg-pink-100 rounded text-[#D82D8B] transition-colors"
+                                    title="Copy số thẻ"
+                                  >
+                                    {copiedField === 'momo_card' ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
+                                  </button>
+                                </div>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-ink-500">Tên chủ thẻ:</span>
+                                <span className="font-semibold font-mono">NGUYEN VAN A</span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-ink-500">Ngày phát hành:</span>
+                                <span className="font-semibold font-mono">07/15</span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-ink-500">Mã OTP:</span>
+                                <span className="font-bold font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">000000</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Option 2: MoMo App Test */}
+                          <div className="p-3 bg-pink-50/50 rounded-lg border border-pink-100 space-y-1.5">
+                            <div className="flex items-center gap-1.5 font-bold text-ink-900 text-[11px] text-[#a51866]">
+                              <Smartphone size={13} />
+                              <span>Đăng nhập Ví MoMo Test:</span>
+                            </div>
+                            <div className="space-y-1 text-ink-700 text-[11px]">
+                              <div className="flex justify-between items-center">
+                                <span className="text-ink-500">Số điện thoại:</span>
+                                <div className="flex items-center gap-1">
+                                  <span className="font-mono font-bold text-ink-900">0968202605</span>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      handleCopy('momo_phone', '0968202605');
+                                    }}
+                                    className="p-1 hover:bg-pink-100 rounded text-[#D82D8B] transition-colors"
+                                    title="Copy SĐT"
+                                  >
+                                    {copiedField === 'momo_phone' ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
+                                  </button>
+                                </div>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-ink-500">Mã OTP:</span>
+                                <span className="font-bold font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">000000</span>
+                              </div>
+                              <div className="pt-2 text-[10px] text-ink-500 italic">
+                                * Giao diện MoMo All-in-One cho phép chọn Thẻ ATM NCB hoặc Quét mã ví MoMo.
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}

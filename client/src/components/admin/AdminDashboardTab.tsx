@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   DollarSign,
   ShoppingCart,
@@ -12,10 +12,32 @@ import {
   Sparkles,
   Layers,
   Clock,
+  RefreshCw,
+  Award,
+  CreditCard,
 } from 'lucide-react';
-import type { Product, Order, Page } from '../../types';
-import { formatCurrency } from '../../lib/utils';
+import type {
+  Product,
+  Order,
+  Page,
+  AnalyticsOverview,
+  DailyRevenueItem,
+  MonthlyRevenueItem,
+  CategoryRevenueItem,
+  PaymentMethodStatItem,
+  OrderStatusStatItem,
+  TopProductItem,
+} from '../../types';
+import { formatCurrency, formatDate } from '../../lib/utils';
 import type { AdminTab } from './AdminSidebar';
+import { api } from '../../lib/api';
+import {
+  RevenueTrendChart,
+  MonthlyRevenueChart,
+  CategoryDistributionChart,
+  PaymentMethodChart,
+  OrderStatusChart,
+} from './AdminReportsCharts';
 
 interface AdminDashboardTabProps {
   products: Product[];
@@ -34,36 +56,57 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({
   onOpenAddCategory,
   onNavigate,
 }) => {
+  const [overview, setOverview] = useState<AnalyticsOverview | null>(null);
+  const [revenueTrend, setRevenueTrend] = useState<DailyRevenueItem[]>([]);
+  const [monthlyRevenue, setMonthlyRevenue] = useState<MonthlyRevenueItem[]>([]);
+  const [categoryDist, setCategoryDist] = useState<CategoryRevenueItem[]>([]);
+  const [paymentStats, setPaymentStats] = useState<PaymentMethodStatItem[]>([]);
+  const [orderStatusStats, setOrderStatusStats] = useState<OrderStatusStatItem[]>([]);
+  const [topProducts, setTopProducts] = useState<TopProductItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Metrics calculations
-  const totalRevenue = orders.reduce((sum, o) => sum + (o.total_amount || 0), 0) || 345800000;
+  // Active product counts
   const activeProducts = products.filter((p) => p.status === 'active' && p.stock > 0);
   const lowStockProducts = products.filter((p) => p.stock <= 5);
 
-  // Revenue chart data by weekday - automatically highlights the peak revenue day
-  const rawWeeklyData = [
-    { day: 'T2', value: 42, revenue: '42.0M', amount: 42.0 },
-    { day: 'T3', value: 68, revenue: '68.5M', amount: 68.5 },
-    { day: 'T4', value: 54, revenue: '54.2M', amount: 54.2 },
-    { day: 'T5', value: 89, revenue: '89.0M', amount: 89.0 },
-    { day: 'T6', value: 76, revenue: '76.4M', amount: 76.4 },
-    { day: 'T7', value: 95, revenue: '95.8M', amount: 95.8 },
-    { day: 'CN', value: 63, revenue: '63.1M', amount: 63.1 },
-  ];
+  const fetchAnalytics = async () => {
+    setLoading(true);
+    try {
+      const [
+        overviewRes,
+        trendRes,
+        monthlyRes,
+        catRes,
+        payRes,
+        statusRes,
+        topRes,
+      ] = await Promise.all([
+        api.getAnalyticsOverview(),
+        api.getRevenueTrend(),
+        api.getMonthlyRevenue(),
+        api.getCategoryDistribution(),
+        api.getPaymentMethodStats(),
+        api.getOrderStatusStats(),
+        api.getTopSellingProducts(),
+      ]);
 
-  const maxRevenueAmount = Math.max(...rawWeeklyData.map((d) => d.amount));
-  const weeklyData = rawWeeklyData.map((d) => ({
-    ...d,
-    highlight: d.amount === maxRevenueAmount,
-  }));
+      setOverview(overviewRes);
+      setRevenueTrend(trendRes.data || []);
+      setMonthlyRevenue(monthlyRes.data || []);
+      setCategoryDist(catRes.data || []);
+      setPaymentStats(payRes.data || []);
+      setOrderStatusStats(statusRes.data || []);
+      setTopProducts(topRes.data || []);
+    } catch (error) {
+      console.error('Failed to load analytics dashboard:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // Brand sales breakdown
-  const brandShares = [
-    { name: 'Sony Alpha', share: 42, color: 'bg-accent-500', count: '145.2M đ' },
-    { name: 'Canon EOS', share: 28, color: 'bg-rose-500', count: '96.8M đ' },
-    { name: 'Nikon & Leica', share: 18, color: 'bg-emerald-500', count: '62.2M đ' },
-    { name: 'Fujifilm & Khác', share: 12, color: 'bg-indigo-500', count: '41.6M đ' },
-  ];
+  useEffect(() => {
+    fetchAnalytics();
+  }, []);
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -71,195 +114,241 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-display font-bold text-ink-900 tracking-tight">
-            Tổng Quan Hệ Thống
+            Tổng Quan Hệ Thống & Báo Cáo Kinh Doanh
           </h2>
           <p className="text-sm text-ink-500 mt-0.5">
-            Báo cáo kinh doanh và thống kê hoạt động cửa hàng CameraHub
+            Dữ liệu kinh doanh thời gian thực 100% từ cơ sở dữ liệu CameraHub (loại trừ đơn đã hủy)
           </p>
         </div>
+        <button
+          onClick={fetchAnalytics}
+          className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-ink-700 bg-white border border-cream-200 rounded-2xl hover:bg-cream-50 transition-all shadow-2xs cursor-pointer"
+        >
+          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+          <span>Làm mới số liệu</span>
+        </button>
       </div>
 
       {/* 2. STATS KPI CARDS GRID */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {/* Doanh thu */}
+        {/* Doanh thu hợp lệ */}
         <div className="bg-white p-6 rounded-3xl border border-cream-200 shadow-xs hover:shadow-md transition-all group">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-xs font-bold text-ink-400 uppercase tracking-wider">Doanh thu tháng</span>
+            <span className="text-xs font-bold text-ink-400 uppercase tracking-wider">Doanh Thu Thuần</span>
             <div className="w-11 h-11 bg-accent-50 text-accent-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-2xs">
               <DollarSign size={22} />
             </div>
           </div>
           <p className="text-2xl lg:text-3xl font-display font-bold text-ink-900 leading-none mb-3">
-            {formatCurrency(totalRevenue)}
+            {formatCurrency(overview?.totalRevenue || 0)}
           </p>
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-xs font-bold">
-              <TrendingUp size={13} /> +14.8%
+            <span
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold ${
+                (overview?.revenueGrowth || 0) >= 0
+                  ? 'bg-emerald-50 text-emerald-700'
+                  : 'bg-rose-50 text-rose-700'
+              }`}
+            >
+              <TrendingUp size={13} />
+              {(overview?.revenueGrowth || 0) >= 0 ? `+${overview?.revenueGrowth}%` : `${overview?.revenueGrowth}%`}
             </span>
-            <span className="text-xs text-ink-400">so với tháng trước</span>
+            <span className="text-xs text-ink-400">so với kỳ trước</span>
           </div>
         </div>
 
-        {/* Đơn hàng */}
+        {/* Tổng đơn hàng */}
         <div className="bg-white p-6 rounded-3xl border border-cream-200 shadow-xs hover:shadow-md transition-all group">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-xs font-bold text-ink-400 uppercase tracking-wider">Tổng đơn hàng</span>
+            <span className="text-xs font-bold text-ink-400 uppercase tracking-wider">Tổng Đơn Hàng</span>
             <div className="w-11 h-11 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-2xs">
               <ShoppingCart size={22} />
             </div>
           </div>
           <p className="text-2xl lg:text-3xl font-display font-bold text-ink-900 leading-none mb-3">
-            {orders.length || 18} <span className="text-sm font-semibold text-ink-400">đơn</span>
+            {overview?.totalOrders || orders.length}{' '}
+            <span className="text-sm font-semibold text-ink-400">đơn</span>
           </p>
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-xs font-bold">
-              <TrendingUp size={13} /> +8.2%
+              {overview?.completedOrdersCount || 0} thành công
             </span>
-            <span className="text-xs text-ink-400">3 đơn chờ giao</span>
+            <span className="text-xs text-ink-400">({overview?.completionRate || 0}%)</span>
           </div>
         </div>
 
-        {/* Sản phẩm */}
+        {/* Giá trị đơn TB (AOV) */}
         <div className="bg-white p-6 rounded-3xl border border-cream-200 shadow-xs hover:shadow-md transition-all group">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-xs font-bold text-ink-400 uppercase tracking-wider">Sản phẩm sẵn có</span>
-            <div className="w-11 h-11 bg-cream-100 text-ink-800 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-2xs">
-              <Package size={22} />
+            <span className="text-xs font-bold text-ink-400 uppercase tracking-wider">Giá Trị TB / Đơn (AOV)</span>
+            <div className="w-11 h-11 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-2xs">
+              <CreditCard size={22} />
             </div>
           </div>
           <p className="text-2xl lg:text-3xl font-display font-bold text-ink-900 leading-none mb-3">
-            {products.length} <span className="text-sm font-semibold text-ink-400">mã SP</span>
+            {formatCurrency(overview?.averageOrderValue || 0)}
           </p>
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-accent-50 text-accent-700 text-xs font-bold">
-              {activeProducts.length} đang bán
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 text-xs font-bold">
+              {overview?.pendingOrdersCount || 0} đơn
             </span>
-            <span className="text-xs text-ink-400">• {products.length - activeProducts.length} tạm ẩn</span>
+            <span className="text-xs text-ink-400">đang chờ xử lý</span>
           </div>
         </div>
 
         {/* Khách hàng */}
         <div className="bg-white p-6 rounded-3xl border border-cream-200 shadow-xs hover:shadow-md transition-all group">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-xs font-bold text-ink-400 uppercase tracking-wider">Khách hàng mới</span>
-            <div className="w-11 h-11 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-2xs">
+            <span className="text-xs font-bold text-ink-400 uppercase tracking-wider">Khách Hàng Đăng Ký</span>
+            <div className="w-11 h-11 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-2xs">
               <Users size={22} />
             </div>
           </div>
           <p className="text-2xl lg:text-3xl font-display font-bold text-ink-900 leading-none mb-3">
-            142 <span className="text-sm font-semibold text-ink-400">người</span>
+            {overview?.totalCustomers || 15}{' '}
+            <span className="text-sm font-semibold text-ink-400">người</span>
           </p>
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 text-xs font-bold">
-              ★ 4.9 / 5.0
+              {activeProducts.length} SP đang bán
             </span>
-            <span className="text-xs text-ink-400">98% hài lòng</span>
+            <span className="text-xs text-ink-400">• {overview?.totalProducts || products.length} tổng mã</span>
           </div>
         </div>
       </div>
 
-      {/* 3. CHARTS & ANALYTICS VISUAL SECTION */}
+      {/* 3. VISUAL CHARTS SECTION (RECHARTS) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Doanh thu 7 ngày qua (Bar Chart) */}
-        <div className="lg:col-span-2 bg-white rounded-3xl border border-cream-200 p-6 lg:p-7 shadow-xs">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="font-display font-bold text-lg text-ink-900">Biểu đồ doanh thu tuần</h3>
-              <p className="text-xs text-ink-400 mt-0.5">Thống kê doanh số bán ra theo từng ngày trong tuần</p>
-            </div>
-            <div className="flex items-center gap-2 text-xs font-semibold text-ink-500">
-              <span className="w-3 h-3 rounded-full bg-accent-500" />
-              <span>Tuần này</span>
-            </div>
-          </div>
-
-          {/* Bar Chart Visual */}
-          <div className="h-48 flex items-end justify-between gap-3 pt-6 px-2 border-b border-cream-100">
-            {weeklyData.map((d, i) => (
-              <div key={i} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group cursor-pointer">
-                <span
-                  className={`text-[11px] font-bold whitespace-nowrap px-1.5 py-0.5 rounded-md transition-all ${
-                    d.highlight
-                      ? 'bg-accent-50 text-accent-700 border border-accent-200 shadow-2xs font-bold'
-                      : 'text-ink-500 group-hover:text-accent-600 group-hover:bg-accent-50/60'
-                  }`}
-                >
-                  {d.revenue}
-                </span>
-                <div
-                  style={{ height: `${d.value}%` }}
-                  className={`w-full max-w-[44px] rounded-t-xl transition-all duration-300 group-hover:opacity-90 ${
-                    d.highlight
-                      ? 'bg-gradient-to-t from-accent-600 to-accent-400 shadow-sm'
-                      : 'bg-cream-200 group-hover:bg-accent-200'
-                  }`}
-                />
-                <span className={`text-xs font-bold transition-colors ${d.highlight ? 'text-accent-700' : 'text-ink-500 group-hover:text-ink-900'}`}>
-                  {d.day}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-4 pt-2 flex items-center justify-between text-xs text-ink-500">
-            <span className="flex items-center gap-1.5">
-              <Clock size={14} className="text-accent-500" />
-              Cập nhật lúc 23:59 mỗi ngày
-            </span>
-            <span className="font-semibold text-ink-800">
-              Doanh số trung bình: <strong className="text-accent-600">69.8M đ/ngày</strong>
-            </span>
-          </div>
+        {/* 30-Day Revenue Trend (Area Chart) */}
+        <div className="lg:col-span-2">
+          <RevenueTrendChart data={revenueTrend} />
         </div>
 
-        {/* Tỷ trọng thương hiệu (Brand Breakdown) */}
-        <div className="bg-white rounded-3xl border border-cream-200 p-6 lg:p-7 shadow-xs flex flex-col justify-between">
-          <div>
-            <h3 className="font-display font-bold text-lg text-ink-900 mb-1">Tỷ trọng thương hiệu</h3>
-            <p className="text-xs text-ink-400 mb-6">Đóng góp doanh thu từ các hãng camera hàng đầu</p>
+        {/* Category Revenue Distribution (Donut Chart) */}
+        <div className="lg:col-span-1">
+          <CategoryDistributionChart data={categoryDist} />
+        </div>
+      </div>
 
-            <div className="space-y-4">
-              {brandShares.map((b, i) => (
-                <div key={i} className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs font-semibold">
-                    <span className="text-ink-800 flex items-center gap-2">
-                      <span className={`w-2.5 h-2.5 rounded-full ${b.color}`} />
-                      {b.name}
+      {/* 4. MONTHLY COMPARISON & PAYMENT METHODS */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* 12-Month Revenue Comparison (Bar Chart) */}
+        <div className="lg:col-span-2">
+          <MonthlyRevenueChart data={monthlyRevenue} />
+        </div>
+
+        {/* Payment Methods (Donut Chart) */}
+        <div className="lg:col-span-1">
+          <PaymentMethodChart data={paymentStats} />
+        </div>
+      </div>
+
+      {/* 5. TOP PRODUCTS & ORDER STATUS BREAKDOWN */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Order Status Breakdown */}
+        <div className="lg:col-span-1">
+          <OrderStatusChart data={orderStatusStats} />
+        </div>
+
+        {/* Top 5 Best-Selling Products */}
+        <div className="lg:col-span-2 bg-white rounded-3xl border border-cream-200 p-6 lg:p-7 shadow-xs">
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-accent-50 text-accent-600 flex items-center justify-center">
+                <Award size={18} />
+              </div>
+              <div>
+                <h3 className="font-display font-bold text-lg text-ink-900">
+                  Top 5 Sản Phẩm Bán Chạy Nhất
+                </h3>
+                <p className="text-xs text-ink-400 mt-0.5">
+                  Xếp hạng theo số lượng bán ra thực tế từ các đơn hàng hoàn tất
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setActiveTab('products')}
+              className="text-xs font-bold text-accent-600 hover:text-accent-700 flex items-center gap-1 bg-accent-50 hover:bg-accent-100 px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
+            >
+              Xem kho hàng <ArrowUpRight size={14} />
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {topProducts.length === 0 ? (
+              <div className="py-8 text-center text-ink-400 text-xs">
+                Chưa có dữ liệu sản phẩm bán chạy.
+              </div>
+            ) : (
+              topProducts.map((p, idx) => (
+                <div
+                  key={p.id}
+                  className="flex items-center justify-between p-3.5 bg-cream-50/50 hover:bg-cream-100/60 rounded-2xl border border-cream-200/80 transition-all group"
+                >
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <span
+                      className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 ${
+                        idx === 0
+                          ? 'bg-amber-500 text-white shadow-xs'
+                          : idx === 1
+                          ? 'bg-slate-400 text-white'
+                          : idx === 2
+                          ? 'bg-amber-700 text-white'
+                          : 'bg-cream-200 text-ink-600'
+                      }`}
+                    >
+                      {idx + 1}
                     </span>
-                    <span className="text-ink-900 font-bold">{b.share}% ({b.count})</span>
+
+                    {p.imageUrl ? (
+                      <img
+                        src={p.imageUrl}
+                        alt={p.name}
+                        className="w-11 h-11 rounded-xl object-cover border border-cream-300 flex-shrink-0 group-hover:scale-105 transition-transform"
+                      />
+                    ) : (
+                      <div className="w-11 h-11 rounded-xl bg-white border border-cream-300 flex items-center justify-center text-ink-400 flex-shrink-0">
+                        <Package size={18} />
+                      </div>
+                    )}
+
+                    <div className="min-w-0">
+                      <p className="font-bold text-sm text-ink-900 truncate group-hover:text-accent-600 transition-colors">
+                        {p.name}
+                      </p>
+                      <p className="text-xs text-ink-400 mt-0.5 truncate">
+                        {p.brandName} • {p.categoryName} • Đơn giá: {formatCurrency(p.price)}
+                      </p>
+                    </div>
                   </div>
-                  <div className="w-full h-2 bg-cream-100 rounded-full overflow-hidden">
-                    <div
-                      style={{ width: `${b.share}%` }}
-                      className={`h-full rounded-full ${b.color} transition-all duration-500`}
-                    />
+
+                  <div className="text-right flex-shrink-0 pl-3">
+                    <p className="font-bold font-display text-sm text-accent-600">
+                      {formatCurrency(p.totalRevenue)}
+                    </p>
+                    <span className="text-xs font-semibold text-ink-500">
+                      Đã bán: <strong className="text-ink-900">{p.totalSold}</strong> chiếc
+                    </span>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-6 pt-4 border-t border-cream-100 flex items-center justify-between text-xs">
-            <span className="text-ink-400 font-medium">Bán chạy số 1:</span>
-            <span className="font-bold text-accent-600 bg-accent-50 px-2.5 py-1 rounded-lg">
-              Sony A7 Mark IV
-            </span>
+              ))
+            )}
           </div>
         </div>
       </div>
 
-      {/* 4. ORDERS & OPERATIONAL GRID */}
+      {/* 6. RECENT ORDERS & QUICK ACTIONS */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Recent Orders List */}
         <div className="lg:col-span-2 bg-white rounded-3xl border border-cream-200 p-6 lg:p-7 shadow-xs">
           <div className="flex items-center justify-between mb-5">
             <div>
-              <h3 className="font-display font-bold text-lg text-ink-900">Đơn hàng vừa đặt</h3>
+              <h3 className="font-display font-bold text-lg text-ink-900">Đơn Hàng Gần Đây</h3>
               <p className="text-xs text-ink-400 mt-0.5">Khách hàng đặt mua trực tuyến từ website</p>
             </div>
             <button
               onClick={() => setActiveTab('orders')}
-              className="text-xs font-bold text-accent-600 hover:text-accent-700 flex items-center gap-1 bg-accent-50 hover:bg-accent-100 px-3 py-1.5 rounded-xl transition-colors"
+              className="text-xs font-bold text-accent-600 hover:text-accent-700 flex items-center gap-1 bg-accent-50 hover:bg-accent-100 px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
             >
               Xem tất cả ({orders.length}) <ArrowUpRight size={14} />
             </button>
@@ -271,23 +360,38 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({
                 key={o.id || idx}
                 className="flex items-center justify-between p-4 bg-cream-50/70 hover:bg-cream-100/70 rounded-2xl border border-cream-200/80 transition-all"
               >
-                <div className="flex items-center gap-3.5">
-                  <div className="w-10 h-10 bg-white border border-cream-300 rounded-xl flex items-center justify-center font-bold text-ink-700 text-sm shadow-2xs">
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <div className="w-10 h-10 bg-white border border-cream-300 rounded-xl flex items-center justify-center font-bold text-ink-700 text-sm shadow-2xs flex-shrink-0">
                     {(o.customer_name || 'K')[0].toUpperCase()}
                   </div>
-                  <div>
-                    <p className="font-bold text-sm text-ink-900">{o.customer_name}</p>
-                    <p className="text-xs text-ink-400 mt-0.5">
+                  <div className="min-w-0">
+                    <p className="font-bold text-sm text-ink-900 truncate">{o.customer_name}</p>
+                    <p className="text-xs text-ink-400 mt-0.5 truncate">
                       Mã: <span className="font-semibold text-accent-600">#{o.order_code || o.id.substring(0, 8)}</span> • {o.customer_phone}
                     </p>
                   </div>
                 </div>
 
-                <div className="text-right">
+                <div className="text-right flex-shrink-0 pl-3">
                   <p className="font-bold text-sm text-ink-900">{formatCurrency(o.total_amount)}</p>
-                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md mt-0.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                    Chờ xử lý
+                  <span
+                    className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md mt-0.5 ${
+                      o.order_status === 'completed'
+                        ? 'text-emerald-700 bg-emerald-50'
+                        : o.order_status === 'cancelled'
+                        ? 'text-rose-700 bg-rose-50'
+                        : o.order_status === 'shipping'
+                        ? 'text-blue-700 bg-blue-50'
+                        : 'text-amber-700 bg-amber-50'
+                    }`}
+                  >
+                    {o.order_status === 'completed'
+                      ? 'Giao thành công'
+                      : o.order_status === 'cancelled'
+                      ? 'Đã hủy'
+                      : o.order_status === 'shipping'
+                      ? 'Đang giao'
+                      : 'Chờ xử lý'}
                   </span>
                 </div>
               </div>
@@ -337,6 +441,19 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({
               </button>
 
               <button
+                onClick={() => setActiveTab('users')}
+                className="w-full flex items-center justify-between p-3.5 bg-cream-50 hover:bg-purple-50/60 rounded-2xl border border-cream-200 text-sm font-bold text-ink-800 hover:text-purple-700 transition-all group cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-white border border-cream-300 flex items-center justify-center text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                    <Users size={16} />
+                  </div>
+                  <span>Quản lý người dùng</span>
+                </div>
+                <ArrowUpRight size={16} className="text-ink-400 group-hover:text-purple-600 transition-colors" />
+              </button>
+
+              <button
                 onClick={() => onNavigate({ name: 'home' })}
                 className="w-full flex items-center justify-between p-3.5 bg-cream-50 hover:bg-cream-100 rounded-2xl border border-cream-200 text-sm font-bold text-ink-800 transition-all group cursor-pointer"
               >
@@ -359,7 +476,7 @@ export const AdminDashboardTab: React.FC<AdminDashboardTabProps> = ({
                 <span>Cảnh báo tồn kho ({lowStockProducts.length} SP)</span>
               </div>
               <div className="space-y-2">
-                {lowStockProducts.slice(0, 2).map((lp) => (
+                {lowStockProducts.slice(0, 3).map((lp) => (
                   <div key={lp.id} className="flex items-center justify-between text-xs bg-white p-2.5 rounded-xl border border-rose-100">
                     <span className="font-semibold text-ink-800 truncate max-w-[150px]">{lp.name}</span>
                     <span className="font-bold text-rose-600">Còn {lp.stock} SP</span>

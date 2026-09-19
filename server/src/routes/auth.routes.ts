@@ -1,14 +1,26 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import { authController } from '../controllers/auth.controller';
 import { authenticateToken } from '../middlewares/auth.middleware';
 
 const router = Router();
+
+// Rate limiter cho endpoint xác thực Google
+const googleAuthLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 phút
+  max: 30, // Giới hạn 30 requests / 15 phút
+  message: { message: 'Quá nhiều yêu cầu đăng nhập từ thiết bị của bạn. Vui lòng thử lại sau 15 phút.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Public routes
 router.post('/register', authController.register);
 router.post('/send-register-otp', authController.sendRegisterOtp);
 router.post('/register-with-otp', authController.registerWithOtp);
 router.post('/login', authController.login);
+router.post('/google', googleAuthLimiter, authController.googleLogin);
+
 
 // Authenticated routes
 router.get('/me', authenticateToken, authController.getProfile);

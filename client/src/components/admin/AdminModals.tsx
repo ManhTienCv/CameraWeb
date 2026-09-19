@@ -1,9 +1,10 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Trash2, Upload } from 'lucide-react';
+import { X, Trash2, Upload, Truck, Loader2 } from 'lucide-react';
 import type { Product, Category, Order } from '../../types';
 import { formatCurrency } from '../../lib/utils';
 import { useToast } from '../../context/ToastContext';
+import { api } from '../../lib/api';
 
 // 1. PRODUCT FORM MODAL
 interface ProductFormModalProps {
@@ -599,10 +600,33 @@ export const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
 interface OrderViewModalProps {
   order: Order | null;
   onClose: () => void;
+  onOrderUpdated?: (updatedOrder: Order) => void;
 }
 
-export const OrderViewModal: React.FC<OrderViewModalProps> = ({ order, onClose }) => {
+export const OrderViewModal: React.FC<OrderViewModalProps> = ({ order, onClose, onOrderUpdated }) => {
+  const [isCreatingGhn, setIsCreatingGhn] = useState(false);
+  const toast = useToast();
+
   if (!order) return null;
+
+  const handleCreateGhnOrder = async () => {
+    setIsCreatingGhn(true);
+    try {
+      const res = await api.createGhnShippingOrder(order.id);
+      if (res.success && res.tracking_code) {
+        toast.success(`Đã tạo vận đơn GHN Express thành công! Mã vận đơn: ${res.tracking_code}`);
+        if (onOrderUpdated) {
+          onOrderUpdated(res.order || { ...order, status: 'shipping' });
+        }
+      } else {
+        toast.error(res.message || 'Không thể tạo vận đơn GHN');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Lỗi kết nối GHN Express API');
+    } finally {
+      setIsCreatingGhn(false);
+    }
+  };
 
   return createPortal(
     <div className="fixed inset-0 w-screen h-screen min-h-[100dvh] z-[9999] bg-black/65 backdrop-blur-xs flex items-center justify-center p-4 cursor-pointer" onClick={onClose}>
@@ -648,10 +672,30 @@ export const OrderViewModal: React.FC<OrderViewModalProps> = ({ order, onClose }
             <div className="p-3.5 bg-cream-50 rounded-2xl border border-cream-200 space-y-1">
               <span className="text-ink-400 block text-[11px]">Hình thức thanh toán</span>
               <p className="font-bold text-ink-900">
-                {order.payment_method === 'vietqr' ? 'VietQR (Vietcombank)' : 'COD (Tiền mặt)'}
+                {order.payment_method === 'momo'
+                  ? 'Ví điện tử MoMo'
+                  : order.payment_method === 'vietqr'
+                  ? 'VietQR (Vietcombank)'
+                  : 'COD (Tiền mặt)'}
               </p>
-              <span className={`inline-block text-[11px] font-bold ${order.payment_status === 'completed' ? 'text-emerald-600' : 'text-amber-600'}`}>
-                {order.payment_status === 'completed' ? '● Đã thanh toán' : '○ Chờ thanh toán'}
+              <span
+                className={`inline-block text-[11px] font-bold ${
+                  order.payment_status === 'refund_pending'
+                    ? 'text-purple-600'
+                    : order.payment_status === 'refunded'
+                    ? 'text-emerald-600'
+                    : order.payment_status === 'paid' || order.payment_status === 'completed'
+                    ? 'text-emerald-600'
+                    : 'text-amber-600'
+                }`}
+              >
+                {order.payment_status === 'refund_pending'
+                  ? '○ Chờ hoàn tiền'
+                  : order.payment_status === 'refunded'
+                  ? '● Đã hoàn tiền'
+                  : order.payment_status === 'paid' || order.payment_status === 'completed'
+                  ? '● Đã thanh toán'
+                  : '○ Chờ thanh toán'}
               </span>
             </div>
 
@@ -662,12 +706,95 @@ export const OrderViewModal: React.FC<OrderViewModalProps> = ({ order, onClose }
                   ? 'Đang giao hàng'
                   : order.status === 'completed'
                   ? 'Hoàn thành'
+                  : order.status === 'refund_pending'
+                  ? 'Chờ hoàn tiền'
                   : order.status === 'cancelled'
                   ? 'Đã hủy'
                   : 'Chờ xử lý'}
               </p>
-              <span className="text-[11px] text-ink-400">Đơn vị: GHN Express</span>
+              {order.status === 'cancelled' && order.cancel_reason && (
+                <span className="text-[11px] text-rose-600 block font-medium">
+                  Lý do hủy: {order.cancel_reason}
+                </span>
+              )}
+              <span className="text-[11px] text-accent-700 font-semibold flex items-center gap-1">
+                <Truck size={12} />
+                <span>{order.shipping_partner || 'Giao Hàng Nhanh (GHN Express)'}</span>
+              </span>
             </div>
+          </div>
+
+          {/* Refund Details Box if available */}
+          {(order.refund_bank_name || order.status === 'refund_pending' || order.payment_status === 'refunded') && (
+            <div className="p-3.5 bg-purple-50/70 border border-purple-200 rounded-2xl space-y-2">
+              <h4 className="font-bold text-purple-900 text-xs uppercase tracking-wide">
+                Thông tin hoàn tiền cho khách
+              </h4>
+              <div className="grid grid-cols-2 gap-2 text-[11px] text-purple-950">
+                <div>
+                  <span className="text-purple-700 block text-[10px]">Ngân hàng / Ví:</span>
+                  <strong>{order.refund_bank_name || 'Chưa cung cấp'}</strong>
+                </div>
+                <div>
+                  <span className="text-purple-700 block text-[10px]">Chủ tài khoản:</span>
+                  <strong className="uppercase">{order.refund_account_holder || order.customer_name}</strong>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-purple-700 block text-[10px]">Số tài khoản / SĐT MoMo:</span>
+                  <strong className="font-mono text-xs">{order.refund_account_number || 'Chưa cung cấp'}</strong>
+                </div>
+                {order.refund_transaction_code && (
+                  <div className="col-span-2 pt-1 border-t border-purple-200 flex items-center justify-between text-emerald-800 font-semibold">
+                    <span>Mã GD hoàn tiền: <strong className="font-mono">{order.refund_transaction_code}</strong></span>
+                    {order.refunded_at && (
+                      <span className="text-[10px] text-ink-500 font-normal">
+                        {new Date(order.refunded_at).toLocaleString('vi-VN')}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* GHN Shipping Order Action Card */}
+          <div className="p-3.5 bg-orange-50/70 border border-orange-200 rounded-2xl space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-xs text-orange-950 flex items-center gap-1.5">
+                <Truck size={14} className="text-orange-600" />
+                Vận chuyển GHN Express API
+              </span>
+              <span className="text-[10px] font-bold text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full border border-orange-300">
+                Tự động tạo vận đơn
+              </span>
+            </div>
+            <p className="text-[11px] text-orange-900/80 leading-relaxed">
+              Tạo đơn giao hàng trực tiếp qua GHN Express, tự động cấp mã vận đơn tracking và gửi email thông báo kèm mã định vị cho khách hàng.
+            </p>
+            {order.status !== 'shipping' && order.status !== 'completed' && order.status !== 'cancelled' ? (
+              <button
+                type="button"
+                onClick={handleCreateGhnOrder}
+                disabled={isCreatingGhn}
+                className="w-full py-2 px-4 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+              >
+                {isCreatingGhn ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    <span>Đang kết nối GHN Express...</span>
+                  </>
+                ) : (
+                  <>
+                    <Truck size={14} />
+                    <span>⚡ Bắn đơn sang GHN Express & Lấy mã vận đơn</span>
+                  </>
+                )}
+              </button>
+            ) : (
+              <div className="p-2 bg-white/80 rounded-xl border border-orange-200 text-xs font-bold text-emerald-700 flex items-center gap-1.5">
+                <span>✓ Đơn hàng đã được xuất vận chuyển GHN Express</span>
+              </div>
+            )}
           </div>
 
           {/* Ordered Products List */}
